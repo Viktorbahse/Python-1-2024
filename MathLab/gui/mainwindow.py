@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout
 from PyQt5.QtCore import Qt
-from custom_graphics_view import CustomGraphicsView
-from canvas import Canvas
+from gui.custom_graphics_view import CustomGraphicsView
+from gui.canvas import Canvas
 
 
 class MainWindow(QMainWindow):
