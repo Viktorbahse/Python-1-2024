@@ -1,5 +1,5 @@
-from core.geometric_objects.geom_obj import *
-from core.exception.exception import CustomException
+from MathLab.core.geometric_objects.geom_obj import *
+from MathLab.core.exception.exception import CustomException
 import sympy as sp
 
 
