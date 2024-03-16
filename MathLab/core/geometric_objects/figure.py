@@ -24,6 +24,12 @@ class Circle(Shape):
         return 2 * sp.pi * self.radius
 
 
+class Polygon(Shape):
+    def __init__(self, vertex, color="black"):
+        self.color = color
+        self.vertex = vertex
+        
+
 class Square(Shape):
     def __init__(self, point_a: Point, point_b: Point, color="black"):
         try:
