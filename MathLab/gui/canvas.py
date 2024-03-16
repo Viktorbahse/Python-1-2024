@@ -1,8 +1,9 @@
+
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
 from PyQt5.QtCore import Qt
-from core.shapes_manager import ShapesManager
-from core.geometric_objects.figure import *
+from MathLab.core.shapes_manager import ShapesManager
+from MathLab.core.geometric_objects.figure import *
 
 
 class Canvas(QGraphicsScene):
@@ -79,16 +80,18 @@ class Canvas(QGraphicsScene):
     def draw_points(self, shape):
         # Отрисовка точек
         radius = shape.radius
-        scene_x, scene_y = self.to_scene_coords(shape.x, shape.y)
+        scene_x, scene_y = self.to_scene_coords(shape.point.x, shape.point.y)
         ellipse = QGraphicsEllipseItem(scene_x - radius, scene_y - radius, 2 * radius, 2 * radius)
         ellipse.setBrush(QBrush(QColor(shape.color)))
         self.addItem(ellipse)
 
     def draw_lines(self, shape):
         # Отрисовка линий
-        x1, y1 = self.to_scene_coords(shape.x1, shape.y1)
-        x2, y2 = self.to_scene_coords(shape.x2, shape.y2)
-        line = QGraphicsLineItem(x1, y1, x2, y2)
+        temp=self.to_scene_coords(shape.line.p1.x, shape.line.p1.y)
+        A = Point(temp[0], temp[1])
+        temp=self.to_scene_coords(shape.line.p2.x, shape.line.p2.y)
+        B = Point(temp[0], temp[1])
+        line = QGraphicsLineItem(A.point.x, A.point.y, B.point.x, B.point.y)
         line.setPen(QPen(QColor(shape.color)))
         self.addItem(line)
 

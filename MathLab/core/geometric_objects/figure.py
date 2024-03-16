@@ -3,8 +3,10 @@ from MathLab.core.exception.exception import CustomException
 import sympy as sp
 
 
+
+
 class Circle(Shape):
-    def __init__(self, x, y, radius, color="black"):
+    def __init__(self, center: Point, radius, color="black"):
         try:
             if radius < 0:
                 raise CustomException("Radius less than zero")
@@ -12,9 +14,7 @@ class Circle(Shape):
             print(f"Произошла ошибка: {e.message}")
         else:
             super().__init__(color)
-            self.x = sp.symbols('x')
-            self.y = sp.symbols('y')
-            self.center = (x, y)
+            self.center = center
             self.radius = radius
 
     def area(self):
@@ -24,20 +24,24 @@ class Circle(Shape):
         return 2 * sp.pi * self.radius
 
 
+class Polygon(Shape):
+    def __init__(self, vertex, color="black"):
+        self.color = color
+        self.vertex = vertex
+        
+
 class Square(Shape):
-    def __init__(self, x1_, y1_, x2_, y2_, color="black"):
+    def __init__(self, point_a: Point, point_b: Point, color="black"):
         try:
-            if x1_ == x2_ and y1_ == y2_:
+            if point_a.point.x == point_b.point.x and point_a.point.y == point_b.point.y:
                 raise CustomException("The vertices of the square coincide")
         except CustomException as e:
             print(f"Произошла ошибка: {e.message}")
         else:
             super().__init__(color)
-            self.x1 = x1_
-            self.y1 = y1_
-            self.x2 = x2_
-            self.y2 = y2_
-            self.side = sp.sqrt((self.x2 - self.x1) ** 2 + (self.y2 - self.y1) ** 2)
+            self.point_a = point_a
+            self.point_b = point_a
+            self.side = sp.sqrt((point_b.point.x - point_a.point.x) ** 2 + (point_b.point.y - point_a.point.y) ** 2)
 
     def area(self):
         return self.side * self.side
@@ -72,3 +76,5 @@ class Triangle(Shape):
 
     def perimeter(self):
         return self.a + self.b + self.c
+
+

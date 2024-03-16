@@ -1,7 +1,8 @@
+
 from PyQt5.QtWidgets import QGraphicsView
 from PyQt5.QtCore import Qt
-from core.geometric_objects.figure import *
-from core.geometric_objects.geom_obj import *
+from MathLab.core.geometric_objects.figure import *
+from MathLab.core.geometric_objects.geom_obj import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
 
@@ -24,7 +25,7 @@ class CustomGraphicsView(QGraphicsView):
             # Если текущий инструмент - линия и начальная точка установлена, рисуем временную линию
             self.scene().shapes_manager.clear_temp_lines()  # Очистка предыдущих временных линий
             self.scene().shapes_manager.add_temp_line(
-                Line(self.temp_point[0], self.temp_point[1], logical_pos[0], logical_pos[1], "blue", ))
+                Line(Point(self.temp_point[0], self.temp_point[1]), Point(logical_pos[0], logical_pos[1]), "blue", ))
 
         self.scene().update_scene()
 
@@ -42,7 +43,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.scene().shapes_manager.clear_temp_lines()
                 final_point = logical_pos
                 self.scene().shapes_manager.add_shape(
-                    Line(self.temp_point[0], self.temp_point[1], final_point[0], final_point[1]))
+                    Line(Point(self.temp_point[0], self.temp_point[1]), Point(final_point[0], final_point[1])))
                 del self.temp_point
         else:
             # Добавление и удаление точки
