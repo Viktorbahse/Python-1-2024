@@ -1,8 +1,6 @@
-from MathLab.core.geometric_objects.geom_obj import *
-from MathLab.core.exception.exception import CustomException
+from core.geometric_objects.geom_obj import *
+from core.exception.exception import CustomException
 import sympy as sp
-
-
 
 
 class Circle(Shape):
@@ -77,4 +75,5 @@ class Triangle(Shape):
     def perimeter(self):
         return self.a + self.b + self.c
 
-
+# FIXME Вынести из __init__ (try, except) в отдельную функцию
+# FIXME Заменить везде color="цвет", на color=(r, g, b, прозрачность)
