@@ -1,9 +1,8 @@
-
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
 from PyQt5.QtCore import Qt
-from MathLab.core.shapes_manager import ShapesManager
-from MathLab.core.geometric_objects.figure import *
+from core.shapes_manager import ShapesManager
+from core.geometric_objects.figure import *
 
 
 class Canvas(QGraphicsScene):
@@ -38,8 +37,8 @@ class Canvas(QGraphicsScene):
     def update_scene(self):
         self.clear()  # Очищаем
         self.draw_grid()  # Рисуем сетку
-        self.draw_shapes()  # Рисуем постоянные фигуры
         self.draw_temp_line()  # Рисуем временные фигуры (пока только линии)
+        self.draw_shapes()  # Рисуем постоянные фигуры
 
     def draw_grid(self):
         # Отрисовка сетки
@@ -71,31 +70,34 @@ class Canvas(QGraphicsScene):
 
     def draw_shapes(self):
         # Отрисовка постоянных фигур
-        for shape in self.shapes_manager.shapes:
-            if isinstance(shape, Point):
-                self.draw_points(shape)
-            elif isinstance(shape, Line):
-                self.draw_lines(shape)
+        for shape in self.shapes_manager.shapes[Line]:
+            self.draw_lines(shape)
+        for shape in self.shapes_manager.shapes[Point]:
+            self.draw_points(shape)
 
     def draw_points(self, shape):
         # Отрисовка точек
         radius = shape.radius
         scene_x, scene_y = self.to_scene_coords(shape.point.x, shape.point.y)
         ellipse = QGraphicsEllipseItem(scene_x - radius, scene_y - radius, 2 * radius, 2 * radius)
-        ellipse.setBrush(QBrush(QColor(shape.color)))
+        ellipse.setBrush(QBrush(QColor(*shape.color)))
         self.addItem(ellipse)
 
     def draw_lines(self, shape):
         # Отрисовка линий
-        temp=self.to_scene_coords(shape.line.p1.x, shape.line.p1.y)
-        A = Point(temp[0], temp[1])
-        temp=self.to_scene_coords(shape.line.p2.x, shape.line.p2.y)
-        B = Point(temp[0], temp[1])
-        line = QGraphicsLineItem(A.point.x, A.point.y, B.point.x, B.point.y)
-        line.setPen(QPen(QColor(shape.color)))
+        scene_x1, scene_y1 = self.to_scene_coords(shape.line.p1.x, shape.line.p1.y)
+        scene_x, scene_y = self.to_scene_coords(shape.line.p2.x, shape.line.p2.y)
+        line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
+        line.setPen(QPen(QColor(*shape.color), shape.width))
         self.addItem(line)
 
     def draw_temp_line(self):
         # Отрисовка временных линий (предпросмотр)
         for shape in self.shapes_manager.temp_items:
             self.draw_lines(shape)
+
+# TODO
+"""
+Словила баг при попытке удалить точку, которая была слишком близко к другой (??) Вроде исправила увеличением радиуса
+ValueError: Line2D.__new__ requires two unique Points.
+"""
