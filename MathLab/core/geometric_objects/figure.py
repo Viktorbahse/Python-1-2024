@@ -1,8 +1,6 @@
-from MathLab.core.geometric_objects.geom_obj import *
-from MathLab.core.exception.exception import CustomException
+from core.geometric_objects.geom_obj import *
+from core.exception.exception import CustomException
 import sympy as sp
-
-
 
 
 class Circle(Shape):
@@ -25,10 +23,19 @@ class Circle(Shape):
 
 
 class Polygon(Shape):
-    def __init__(self, vertex, color="black"):
-        self.color = color
-        self.vertex = vertex
-        
+    def __init__(self, points=None, color=(255, 0, 0, 255)):
+        super().__init__(color)
+        if points is None:
+            self.points = []
+        else:
+            self.points = points
+
+        self.point_color = self.color
+        self.line_color = self.color
+
+    def add_point(self, point):
+        self.points.append(point)
+
 
 class Square(Shape):
     def __init__(self, point_a: Point, point_b: Point, color="black"):
@@ -77,4 +84,5 @@ class Triangle(Shape):
     def perimeter(self):
         return self.a + self.b + self.c
 
-
+# FIXME Вынести из __init__ (try, except) в отдельную функцию
+# FIXME Заменить везде color="цвет", на color=(r, g, b, прозрачность)
