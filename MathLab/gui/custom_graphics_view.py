@@ -77,7 +77,7 @@ class CustomGraphicsView(QGraphicsView):
             else:
                 if closest_point:
                     new_point = closest_point
-                    new_point.add_to_owner(self.current_polygon)
+                    # new_point.add_to_owner(self.current_polygon)
                 else:
                     new_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_polygon])
                     self.scene().shapes_manager.add_shape(new_point)

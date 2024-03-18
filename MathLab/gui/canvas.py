@@ -37,9 +37,15 @@ class Canvas(QGraphicsScene):
     def update_scene(self):
         self.clear()  # Очищаем
         self.draw_grid()  # Рисуем сетку
+        self.draw_coordinate_axes()# Рисуем оси координат
         self.draw_temp_line()  # Рисуем временные фигуры (пока только линии)
         self.draw_shapes()  # Рисуем постоянные фигуры
 
+    def draw_coordinate_axes(self):
+        center_x = self.sceneRect().width() / 2 + self.base_point[0]
+        center_y = self.sceneRect().height() / 2 + self.base_point[1]
+        self.addLine(center_x, 0, center_x, self.sceneRect().height(), QPen(Qt.black, 1))
+        self.addLine(0, center_y, self.sceneRect().width(), center_y, QPen(Qt.black, 1))
     def draw_grid(self):
         # Отрисовка сетки
         self.clear()
@@ -72,6 +78,7 @@ class Canvas(QGraphicsScene):
         # Отрисовка постоянных фигур
         for shape in self.shapes_manager.shapes[Line]:
             self.draw_lines(shape)
+            self.draw_inf_lines(shape)
         for shape in self.shapes_manager.shapes[Point]:
             self.draw_points(shape)
 
@@ -90,6 +97,31 @@ class Canvas(QGraphicsScene):
         line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
         line.setPen(QPen(QColor(*shape.color), shape.width))
         self.addItem(line)
+
+    def draw_inf_lines(self,shape):
+        scene_x1, scene_y1 = self.to_scene_coords(shape.line.p1.x, shape.line.p1.y)
+        scene_x, scene_y = self.to_scene_coords(shape.line.p2.x, shape.line.p2.y)
+        if scene_x1==scene_x:
+            line = QGraphicsLineItem(scene_x1, 0, scene_x, self.sceneRect().height())
+            line.setPen(QPen(QColor(*shape.color), shape.width))
+            self.addItem(line)
+        elif scene_y1==scene_y:
+            line = QGraphicsLineItem(0, scene_y1, self.sceneRect().width(), scene_y)
+            line.setPen(QPen(QColor(*shape.color), shape.width))
+            self.addItem(line)
+        else:
+            slope=(shape.line.p2.y-shape.line.p1.y)/(shape.line.p2.x-shape.line.p1.x)
+            intercept=shape.line.p2.y-slope*shape.line.p2.x
+            x1,y1=self.to_logical_coords(0,0) #координаты верхнего левого угла
+            x2, y2 = self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())
+            scene_x1, scene_y1 = self.to_scene_coords(x1, slope*(x1)+intercept)
+            scene_x, scene_y = self.to_scene_coords(x2, slope*(x2)+intercept)
+            line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
+            line.setPen(QPen(QColor(*shape.color), shape.width))
+            self.addItem(line)
+
+
+
 
     def draw_temp_line(self):
         # Отрисовка временных линий (предпросмотр)
