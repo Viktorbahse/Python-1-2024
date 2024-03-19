@@ -8,7 +8,7 @@ SEARCH_RADIUS = 5
 
 class ShapesManager:
     def __init__(self):
-        self.shapes = {Point: [], Line: [], Polygon: []}  # Словарик для хранения фигур
+        self.shapes = {Point: [], Segment: [], Polygon: []}  # Словарик для хранения фигур
         self.temp_items = []  # Список для хранения временных фигур, таких как "предпросмотр"
         x = symbols('x')
         f = x ** 2 - 4 * x + 4
@@ -19,7 +19,8 @@ class ShapesManager:
 
     def remove_shape(self, shape):
         if shape in self.shapes[type(shape)]:
-            self.shapes[type(shape)].remove(shape)
+            if shape == Point:  # Метод удаления работает только для Point
+                self.shapes[type(shape)].remove(shape)
 
     def find_shape(self, x, y, radius=SEARCH_RADIUS):
         for shape in self.shapes[Point]:
