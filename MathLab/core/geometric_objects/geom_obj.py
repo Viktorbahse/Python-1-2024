@@ -86,7 +86,7 @@ class Line(Shape):
         self.line = None
         self.points = []
 
-        # У нас может быть отрезок, которому не передали точки
+        # У нас может быть прямая, которому не передали точки
         if points is not None:
             self.add_point(points[0])
             self.add_point(points[1])
@@ -116,7 +116,7 @@ class Ray(Shape):
         self.ray = None
         self.points = []
 
-        # У нас может быть отрезок, которому не передали точки
+        # У нас может быть луч, которому не передали точки
         if points is not None:
             self.add_point(points[0])
             self.add_point(points[1])
