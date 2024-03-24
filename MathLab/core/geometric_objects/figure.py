@@ -57,6 +57,16 @@ class Square(Shape):
         return 4 * self.side
 
 
+class Function(Shape):
+    def __init__(self, latex_string, color=(255, 0, 0, 255),width=1.5):
+        self.expr = sp.sympify(latex_string)
+        self.width = width
+        super().__init__(color)
+    def evaluate(self, x_value):
+        y_value = self.expr.subs('x', x_value)
+        return y_value
+
+
 class Triangle(Shape):
     def __init__(self, x1_, y1_, x2_, y2_, x3_, y3_, color="black"):
         try:

@@ -1,3 +1,4 @@
+
 import sympy as sp
 import math
 
@@ -12,17 +13,32 @@ class Shape:
 
 
 class Point(Shape):
-    def __init__(self, x, y, color=(71, 181, 255, 255), owner=[]):
+    def __init__(self, x, y, color=(71, 181, 255, 255), owner=None):
         super().__init__(color=color)
         self.point = sp.Point(x, y)
+
+        # Мне все-таки нужны self.x, self.y. Именно их я беру для отрисовки
+        self.x = x
+        self.y = y
         self.radius = 5
-        self.owner = owner  # Принадлежности
+        self.owner = owner if owner is not None else []  # Определяем список
         for shape in self.owner:
             self.set_color(shape.point_color)
 
     def add_to_owner(self, owner):
         self.owner.append(owner)
-        self.set_color(owner.point_color)
+
+        # Следующие строчки больше для отладки. Если точка принадлежит нескольким объектам, то у нее будет "средний" цвет
+        if self.owner:
+            color = [0, 0, 0, 0]
+            for shape in self.owner:
+                shape_color = shape.point_color
+                for i in range(len(color)):
+                    color[i] += shape_color[i]
+            for i in range(len(color)):
+                color[i] //= len(self.owner)
+        # self.set_color(shape.point_color)
+        self.set_color(color)
 
     def distance(self, other_point):
         return self.point.distance(other_point.point)
@@ -32,39 +48,92 @@ class Point(Shape):
         return distance <= check_radius
 
 
-# class Line(Shape):
-#     def __init__(self, x1, y1, x2, y2, color="black"):
-#         super().__init__(color)
-#         self.x1 = x1
-#         self.y1 = y1
-#         self.x2 = x2
-#         self.y2 = y2
-
-
-class Line(Shape):
-    def __init__(self, a: Point,  b: Point, color=(6, 40, 61, 200), width=1.5, owner=[]):
+class Segment(Shape):
+    def __init__(self, points=None, color=(6, 40, 61, 255), width=1.5, owner=None):
         super().__init__(color=color)
-        self.line = sp.Line(a.point, b.point)
-        self.x1 = a.point.x
-        self.y1 = a.point.y
-        self.x2 = b.point.x
-        self.y2 = b.point.y
+        self.point_1 = None
+        self.point_2 = None
+        self.segment = None
+        self.points = []
+
+        # У нас может быть отрезок, которому не передали точки
+        if points is not None:
+            self.add_point(points[0])
+            self.add_point(points[1])
+
         self.width = width
-        self.owner = owner
+        self.point_color = (255, 220, 51, 255)
+        self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.point_color)
+
+    def add_point(self, point):
+        self.points.append(point)
+        if len(self.points) == 2:
+            self.point_1 = self.points[0]
+            self.point_2 = self.points[1]
+            self.segment = sp.Line(self.point_1.point, self.point_2.point)
 
     def add_to_owner(self, owner):
         self.owner.append(owner)
         self.set_color(owner.line_color)
 
-# class Line(Shape):
-#     def __init__(self, a: Point, b:Point, color="black"):
-#         self.line = sp.Line(a.point, b.point)
-#         self.color = color
-#
-#     def slope(self):
-#         return self.line.slope
-#
-#     def equation(self):
-#         return self.line.equation()
+class Line(Shape):
+    def __init__(self, points=None, color=(0, 0, 0, 255), width=1.5, owner=None):
+        super().__init__(color=color)
+        self.point_1 = None
+        self.point_2 = None
+        self.line = None
+        self.points = []
+
+        # У нас может быть отрезок, которому не передали точки
+        if points is not None:
+            self.add_point(points[0])
+            self.add_point(points[1])
+
+        self.width = width
+        self.point_color = (0, 0, 0, 255)
+        self.owner = owner if owner is not None else []
+        for shape in self.owner:
+            self.set_color(shape.point_color)
+
+    def add_point(self, point):
+        self.points.append(point)
+        if len(self.points) == 2:
+            self.point_1 = self.points[0]
+            self.point_2 = self.points[1]
+            self.segment = sp.Line(self.point_1.point, self.point_2.point)
+
+    def add_to_owner(self, owner):
+        self.owner.append(owner)
+        self.set_color(owner.line_color)
+
+class Ray(Shape):
+    def __init__(self, points=None, color=(255, 51, 153, 255), width=1.5, owner=None):
+        super().__init__(color=color)
+        self.point_1 = None
+        self.point_2 = None
+        self.ray = None
+        self.points = []
+
+        # У нас может быть отрезок, которому не передали точки
+        if points is not None:
+            self.add_point(points[0])
+            self.add_point(points[1])
+
+        self.width = width
+        self.point_color = (127, 0, 255, 255)
+        self.owner = owner if owner is not None else []
+        for shape in self.owner:
+            self.set_color(shape.point_color)
+
+    def add_point(self, point):
+        self.points.append(point)
+        if len(self.points) == 2:
+            self.point_1 = self.points[0]
+            self.point_2 = self.points[1]
+            self.segment = sp.Line(self.point_1.point, self.point_2.point)
+
+    def add_to_owner(self, owner):
+        self.owner.append(owner)
+        self.set_color(owner.line_color)
