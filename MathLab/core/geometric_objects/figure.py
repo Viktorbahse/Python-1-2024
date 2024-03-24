@@ -4,22 +4,34 @@ import sympy as sp
 
 
 class Circle(Shape):
-    def __init__(self, center: Point, radius, color="black"):
-        try:
-            if radius < 0:
-                raise CustomException("Radius less than zero")
-        except CustomException as e:
-            print(f"Произошла ошибка: {e.message}")
-        else:
-            super().__init__(color)
-            self.center = center
-            self.radius = radius
+    def __init__(self, points=None, color=(17, 167, 234, 255), width=1.5, owner=None):
+        super().__init__(color=color)
+        self.point_1 = None
+        self.point_2 = None
+        self.circle = None
+        self.points = []
 
-    def area(self):
-        return sp.pi * self.radius**2
+        # У нас может быть окружность, у которой радиус пока неизвестен
+        if points is not None:
+            self.add_point(points[0])
+            self.add_point(points[1])
 
-    def perimeter(self):
-        return 2 * sp.pi * self.radius
+        self.width = width
+        self.point_color = (0, 102,204, 255)
+        self.owner = owner if owner is not None else []
+        for shape in self.owner:
+            self.set_color(shape.point_color)
+
+    def add_point(self, point):
+        self.points.append(point)
+        if len(self.points) == 2:
+            self.point_1 = self.points[0]
+            self.point_2 = self.points[1]
+            self.segment = sp.Line(self.point_1.point, self.point_2.point)
+
+    def add_to_owner(self, owner):
+        self.owner.append(owner)
+        self.set_color(owner.line_color)
 
 
 class Polygon(Shape):
@@ -58,7 +70,7 @@ class Square(Shape):
 
 
 class Function(Shape):
-    def __init__(self, latex_string, color=(255, 0, 0, 255),width=1.5):
+    def __init__(self, latex_string, color=(255, 0, 0, 255), width=1.5):
         self.expr = sp.sympify(latex_string)
         self.width = width
         super().__init__(color)

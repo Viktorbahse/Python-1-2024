@@ -61,6 +61,7 @@ class Canvas(QGraphicsScene):
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
     def draw_grid(self):
+
         # Отрисовка сетки
         self.clear()
         pen = QPen(Qt.gray, 0.5)
@@ -97,10 +98,20 @@ class Canvas(QGraphicsScene):
             # self.draw_inf_lines(shape)
         for shape in self.shapes_manager.shapes[Ray]:
             self.draw_ray(shape)
+        for shape in self.shapes_manager.shapes[Circle]:
+            self.draw_circle(shape)
         for shape in self.shapes_manager.shapes[Point]:
             self.draw_point(shape)
 
 
+    def draw_circle(self,shape):
+        scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
+        scene_x, scene_y = self.to_scene_coords(shape.point_2.x, shape.point_2.y)
+        rad=(((scene_x1-scene_x)**2 + (scene_y1-scene_y)**2)**(0.5))
+        ellipse = QGraphicsEllipseItem(scene_x1-rad, scene_y1-rad, 2*rad, 2*rad)  # координаты левого верхнего угла, ширина и высота
+        ellipse.setPen(QPen(QColor(*shape.color), shape.width))
+        ellipse.setBrush(QColor(0, 255, 255,25))
+        self.addItem(ellipse)
 
     def draw_point(self, shape):
         # Отрисовка точек
@@ -128,13 +139,6 @@ class Canvas(QGraphicsScene):
                 line = QGraphicsLineItem(scene_x1, 0, scene_x, scene_y1)
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
-        elif scene_y1 == scene_y:
-            if scene_x>scene_x1:
-                line = QGraphicsLineItem(scene_x1, scene_y1, self.sceneRect().width(), scene_y)
-            else:
-                line = QGraphicsLineItem(0, scene_y1, scene_x1, scene_y)
-            line.setPen(QPen(QColor(*shape.color), shape.width))
-            self.addItem(line)
         else:
             slope = (shape.point_2.y - shape.point_1.y) / (shape.point_2.x - shape.point_1.x)
             intercept = shape.point_2.y - slope * shape.point_2.x
@@ -156,10 +160,6 @@ class Canvas(QGraphicsScene):
             line = QGraphicsLineItem(scene_x1, 0, scene_x, self.sceneRect().height())
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
-        elif scene_y1 == scene_y:
-            line = QGraphicsLineItem(0, scene_y1, self.sceneRect().width(), scene_y)
-            line.setPen(QPen(QColor(*shape.color), shape.width))
-            self.addItem(line)
         else:
             slope = (shape.point_2.y - shape.point_1.y) / (shape.point_2.x - shape.point_1.x)
             intercept = shape.point_2.y - slope * shape.point_2.x
@@ -171,6 +171,7 @@ class Canvas(QGraphicsScene):
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
 
+
     def draw_temp_shapes(self):
         # Отрисовка временных линий (предпросмотр)
         for shape in self.shapes_manager.temp_segments:
@@ -179,3 +180,5 @@ class Canvas(QGraphicsScene):
             self.draw_lines(shape)
         for shape in self.shapes_manager.temp_rays:
             self.draw_ray(shape)
+        for shape in self.shapes_manager.temp_circles:
+            self.draw_circle(shape)

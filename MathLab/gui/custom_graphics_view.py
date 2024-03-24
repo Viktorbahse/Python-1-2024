@@ -19,7 +19,8 @@ class CustomGraphicsView(QGraphicsView):
             'Segment': self.handle_segment_creation,
             'Polygon': self.handle_polygon_creation,
             'Line': self.handle_line_creation,
-            'Ray': self.handle_ray_creation
+            'Ray': self.handle_ray_creation,
+            'Circle': self.handle_circle_creation
         }
 
         self.setRenderHint(QPainter.Antialiasing)  # Включение сглаживания
@@ -48,13 +49,18 @@ class CustomGraphicsView(QGraphicsView):
                 self.temp_point,
                 Point(logical_pos[0], logical_pos[1])
             )
-        elif self.current_tool == 'Line'  and self.temp_point is not None:
+        elif self.current_tool == 'Line' and self.temp_point is not None:
             self.draw_temp_line(
                 self.temp_point,
                 Point(logical_pos[0], logical_pos[1])
             )
-        elif self.current_tool == 'Ray'  and self.temp_point is not None:
+        elif self.current_tool == 'Ray' and self.temp_point is not None:
             self.draw_temp_ray(
+                self.temp_point,
+                Point(logical_pos[0], logical_pos[1])
+            )
+        elif self.current_tool == 'Circle' and self.temp_point is not None:
+            self.draw_temp_circle(
                 self.temp_point,
                 Point(logical_pos[0], logical_pos[1])
             )
@@ -65,19 +71,24 @@ class CustomGraphicsView(QGraphicsView):
                 Point(logical_pos[0], logical_pos[1])
             )
 
+    def draw_temp_circle(self, point_1, point_2, color=(37, 109, 133, 200)):
+        # Добавляет временный круг в shapes_manager для отрисовки. Принимает точки класса Point.
+        self.scene().shapes_manager.clear_temp_circles()
+        circle = Circle(points=[point_1, point_2], color=color)
+        self.scene().shapes_manager.add_temp_circle(circle)
     def draw_temp_ray(self, point_1, point_2, color=(37, 109, 133, 200)):
-        # Добавляет временную линию в shapes_manager для дальнейшей отрисовки. Принимает точки класса Point
+        # Добавляет временный луч в shapes_manager для отрисовки. Принимает точки класса Point.
         self.scene().shapes_manager.clear_temp_rays()
         ray = Ray(points=[point_1, point_2], color=color)
         self.scene().shapes_manager.add_temp_ray(ray)
     def draw_temp_line(self, point_1, point_2, color=(37, 109, 133, 200)):
-        # Добавляет временную линию в shapes_manager для дальнейшей отрисовки. Принимает точки класса Point
+        # Добавляет временную линию в shapes_manager для отрисовки. Принимает точки класса Point.
         self.scene().shapes_manager.clear_temp_lines()
         line = Line(points=[point_1, point_2], color=color)
         self.scene().shapes_manager.add_temp_line(line)
 
     def draw_temp_segment(self, point_1, point_2, color=(37, 109, 133, 200)):
-        # Добавляет временную линию в shapes_manager для дальнейшей отрисовки. Принимает точки класса Point
+        # Добавляет временный отрезок в shapes_manager для отрисовки. Принимает точки класса Point.
         self.scene().shapes_manager.clear_temp_segments()
         segment = Segment(points=[point_1, point_2], color=color)
         self.scene().shapes_manager.add_temp_segment(segment)
@@ -86,7 +97,7 @@ class CustomGraphicsView(QGraphicsView):
         """
         Добавляет точку на сцену.
         Может принимать для этого как логические координаты (для инструмента Point),
-        так и точку (сделано как костыль для других инструментов)
+        так и точку (сделано как костыль для других инструментов).
         """
         if not closest_point:  # Добавляет новую только тогда, когда не найдена точка в ближайшем радиусе
             if logical_pos is not None:
@@ -94,12 +105,12 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().shapes_manager.add_shape(point)
 
     def handle_line_creation(self,logical_pos, closest_point):
-        if self.temp_point is None:  # Т.е. это наша первая точка
-            self.current_line = Line()  # Создаем пока пустой отрезок
-            if closest_point:  # Если нашли ближайшую точку, используем её как начало линии
+        if self.temp_point is None:  # Выбираем начальную точку линии.
+            self.current_line = Line()  # Создаем пустую линию.
+            if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
                 closest_point.add_to_owner(owner=self.current_line)
                 self.temp_point = closest_point
-            else:  # Иначе устанавливаем текущую позицию
+            else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
                 self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
                 self.handle_point_creation(point=self.temp_point)
             self.current_line.add_point(self.temp_point)
@@ -117,17 +128,17 @@ class CustomGraphicsView(QGraphicsView):
             self.temp_point = None
 
     def handle_ray_creation(self,logical_pos, closest_point):
-        if self.temp_point is None:  # Т.е. это наша первая точка
-            self.current_ray = Ray()  # Создаем пока пустой отрезок
-            if closest_point:  # Если нашли ближайшую точку, используем её как начало линии
+        if self.temp_point is None:  #Выбираем начальную точку луча.
+            self.current_ray = Ray()  # Создаем пока пустой луч(без направления).
+            if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
                 closest_point.add_to_owner(owner=self.current_ray)
                 self.temp_point = closest_point
-            else:  # Иначе устанавливаем текущую позицию
+            else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
                 self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_ray])
                 self.handle_point_creation(point=self.temp_point)
             self.current_ray.add_point(self.temp_point)
         else:
-            # Завершаем рисовать линию и добавляем её в список постоянных фигур (второе нажатие)
+            # Завершаем рисовать луч и добавляем его в список постоянных фигур (второе нажатие).
             if closest_point:
                 closest_point.add_to_owner(owner=self.current_ray)
                 final_point = closest_point
@@ -135,8 +146,31 @@ class CustomGraphicsView(QGraphicsView):
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_ray])
                 self.handle_point_creation(point=final_point)
             self.current_ray.add_point(final_point)
-            self.scene().shapes_manager.clear_temp_lines()
+            self.scene().shapes_manager.clear_temp_rays()
             self.scene().shapes_manager.add_shape(self.current_ray)
+            self.temp_point = None
+
+    def handle_circle_creation(self,logical_pos, closest_point):
+        if self.temp_point is None:  # Устанавливаем центр круга.
+            self.current_circle = Circle()  # Создаем пока пустой круг.
+            if closest_point:  # Если нашли ближайшую точку, используем её как центр.
+                closest_point.add_to_owner(owner=self.current_circle)
+                self.temp_point = closest_point
+            else:  # Если не нашлась, выбираем для центра координаты цурсора.
+                self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_circle])
+                self.handle_point_creation(point=self.temp_point)
+            self.current_circle.add_point(self.temp_point)
+        else:
+            # Завершаем рисовать круг и добавляем его в список постоянных фигур (второе нажатие).
+            if closest_point:
+                closest_point.add_to_owner(owner=self.current_circle)
+                final_point = closest_point
+            else:
+                final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_circle])
+                self.handle_point_creation(point=final_point)
+            self.current_circle.add_point(final_point)
+            self.scene().shapes_manager.clear_temp_circles()
+            self.scene().shapes_manager.add_shape(self.current_circle)
             self.temp_point = None
 
 
@@ -240,14 +274,19 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().base_point[0] += step
         elif event.key() == Qt.Key_D:
             self.scene().base_point[0] -= step
-        elif event.key()==Qt.Key_E:
+        elif event.key() == Qt.Key_E:
             if self.current_tool == 'Point':
                 self.current_tool = 'Line'
             else:
                 self.current_tool = 'Point'
-        elif event.key()==Qt.Key_R:
+        elif event.key() == Qt.Key_R:
             if self.current_tool == 'Point':
                 self.current_tool = 'Ray'
+            else:
+                self.current_tool = 'Point'
+        elif event.key() == Qt.Key_Y:
+            if self.current_tool == 'Point':
+                self.current_tool = 'Circle'
             else:
                 self.current_tool = 'Point'
         elif event.key() == Qt.Key_Q:

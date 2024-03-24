@@ -79,7 +79,7 @@ class Segment(Shape):
         self.set_color(owner.line_color)
 
 class Line(Shape):
-    def __init__(self, points=None, color=(0, 0, 0, 255), width=1.5, owner=None):
+    def __init__(self, points=None, color=(51, 51, 255, 255), width=1.5, owner=None):
         super().__init__(color=color)
         self.point_1 = None
         self.point_2 = None
@@ -92,7 +92,7 @@ class Line(Shape):
             self.add_point(points[1])
 
         self.width = width
-        self.point_color = (0, 0, 0, 255)
+        self.point_color = (127, 0, 255, 255)
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.point_color)
