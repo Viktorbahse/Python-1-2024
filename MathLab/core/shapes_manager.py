@@ -13,7 +13,8 @@ class ShapesManager:
         self.temp_lines = []
         self.temp_rays = []
         self.temp_circles = []
-        
+
+
     def add_shape(self, shape):
         self.shapes[type(shape)].append(shape)
 
@@ -43,7 +44,6 @@ class ShapesManager:
 
     def add_temp_ray(self, shape):
         self.temp_rays.append(shape)
-
     def add_temp_circle(self, shape):
         self.temp_circles.append(shape)
 
@@ -55,6 +55,5 @@ class ShapesManager:
 
     def clear_temp_rays(self):
         self.temp_rays = []
-
     def clear_temp_circles(self):
         self.temp_circles = []

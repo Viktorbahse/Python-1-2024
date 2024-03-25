@@ -32,24 +32,38 @@ class CustomGraphicsView(QGraphicsView):
         logical_pos = self.scene().to_logical_coords(scene_pos.x(),
                                                      scene_pos.y())  # Преобразует координаты сцены в логические координаты
 
-        # print(f"Logical coordinates: {logical_pos}")
-        # print(f"scene_pos: {scene_pos.x(), scene_pos.y()}")
+        print(f"Logical coordinates: {logical_pos}")
+        print(f"scene_pos: {scene_pos.x(), scene_pos.y()}")
 
         self.initiate_temp_shape_drawing(logical_pos)
         self.scene().update_scene()
 
     def initiate_temp_shape_drawing(self, logical_pos):
-        #Инициирует отрисовку временной фигуры в зависимости от инструмента, который выбран
-
-        if self.temp_point is not None and self.current_tool in ['Segment', 'Line', 'Ray', 'Circle']:
-            tools = {
-                'Segment': self.draw_temp_segment,
-                'Line': self.draw_temp_line,
-                'Ray': self.draw_temp_ray,
-                'Circle': self.draw_temp_circle
-            }
-            tools[self.current_tool](self.temp_point, Point(logical_pos[0], logical_pos[1]))
-
+        """
+        Инициирует отрисовку временной фигуры в зависимости от инструмента, который выбран
+        Для 'Segment' и 'Polygon' идет от последней точки до текущей позиции курсора (преоб. в логические
+        координаты).
+        """
+        if  self.current_tool == 'Segment' and self.temp_point is not None:
+            self.draw_temp_segment(
+                self.temp_point,
+                Point(logical_pos[0], logical_pos[1])
+            )
+        elif self.current_tool == 'Line' and self.temp_point is not None:
+            self.draw_temp_line(
+                self.temp_point,
+                Point(logical_pos[0], logical_pos[1])
+            )
+        elif self.current_tool == 'Ray' and self.temp_point is not None:
+            self.draw_temp_ray(
+                self.temp_point,
+                Point(logical_pos[0], logical_pos[1])
+            )
+        elif self.current_tool == 'Circle' and self.temp_point is not None:
+            self.draw_temp_circle(
+                self.temp_point,
+                Point(logical_pos[0], logical_pos[1])
+            )
         elif self.current_tool == 'Polygon' and self.polygon_points is not None and self.polygon_points:
             last_point = self.polygon_points[-1]
             self.draw_temp_segment(
@@ -62,13 +76,11 @@ class CustomGraphicsView(QGraphicsView):
         self.scene().shapes_manager.clear_temp_circles()
         circle = Circle(points=[point_1, point_2], color=color)
         self.scene().shapes_manager.add_temp_circle(circle)
-
     def draw_temp_ray(self, point_1, point_2, color=(37, 109, 133, 200)):
         # Добавляет временный луч в shapes_manager для отрисовки. Принимает точки класса Point.
         self.scene().shapes_manager.clear_temp_rays()
         ray = Ray(points=[point_1, point_2], color=color)
         self.scene().shapes_manager.add_temp_ray(ray)
-
     def draw_temp_line(self, point_1, point_2, color=(37, 109, 133, 200)):
         # Добавляет временную линию в shapes_manager для отрисовки. Принимает точки класса Point.
         self.scene().shapes_manager.clear_temp_lines()
@@ -82,7 +94,11 @@ class CustomGraphicsView(QGraphicsView):
         self.scene().shapes_manager.add_temp_segment(segment)
 
     def handle_point_creation(self, logical_pos=None, point=None, closest_point=False):
-        # Добавляет точку на сцену
+        """
+        Добавляет точку на сцену.
+        Может принимать для этого как логические координаты (для инструмента Point),
+        так и точку (сделано как костыль для других инструментов).
+        """
         if not closest_point:  # Добавляет новую только тогда, когда не найдена точка в ближайшем радиусе
             if logical_pos is not None:
                 point = Point(logical_pos[0], logical_pos[1])
@@ -111,7 +127,7 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().shapes_manager.add_shape(self.current_line)
             self.temp_point = None
 
-    def handle_ray_creation(self, logical_pos, closest_point):
+    def handle_ray_creation(self,logical_pos, closest_point):
         if self.temp_point is None:  #Выбираем начальную точку луча.
             self.current_ray = Ray()  # Создаем пока пустой луч(без направления).
             if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
@@ -134,7 +150,7 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().shapes_manager.add_shape(self.current_ray)
             self.temp_point = None
 
-    def handle_circle_creation(self, logical_pos, closest_point):
+    def handle_circle_creation(self,logical_pos, closest_point):
         if self.temp_point is None:  # Устанавливаем центр круга.
             self.current_circle = Circle()  # Создаем пока пустой круг.
             if closest_point:  # Если нашли ближайшую точку, используем её как центр.
@@ -225,15 +241,31 @@ class CustomGraphicsView(QGraphicsView):
         closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
                                                                        10 / self.scene().zoom_factor)  # Ближайшие точки
         self.tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
+        """
+        Я пока удалила "Удаление", т.к. это должен быть отдельный инструмент со своей логикой
+
+            elif event.button() == Qt.RightButton:
+                shape = self.scene().shapes_manager.find_shape(logical_pos[0], logical_pos[1], 10 / self.scene().zoom_factor)
+                if shape:
+                    self.scene().shapes_manager.remove_shape(shape)
+        """
+        """
+        Для отладки, чтобы было на всякий случай
+        for sh in self.scene().shapes_manager.shapes:
+            for s in self.scene().shapes_manager.shapes[sh]:
+                print(f"{sh}\t|\t{type(s)}\t|\t{s.owner}")
+        print("------------------------")
+        """
         self.scene().update_scene()
 
     def keyPressEvent(self, event):
         step = 10
         # Перемещение, зум, переключение инструментов
         if event.key() == Qt.Key_Equal:
-            self.scene().set_zoom_factor(self.scene().zoom_factor * 1.1)
+            self.scene().zoom_factor *= 1.1
         if event.key() == Qt.Key_Minus:
-            self.scene().set_zoom_factor(self.scene().zoom_factor / 1.1)
+            self.scene().zoom_factor /= 1.1
+            self.scene().draw_grid()
         if event.key() == Qt.Key_W:
             self.scene().base_point[1] += step
         elif event.key() == Qt.Key_S:
