@@ -35,7 +35,7 @@ class ShapesManager:
                 return shape
         return None
 
-        def add_temp_segment(self, shape):
+    def add_temp_segment(self, shape):
         self.temp_segments.append(shape)
 
     def add_temp_line(self, shape):
