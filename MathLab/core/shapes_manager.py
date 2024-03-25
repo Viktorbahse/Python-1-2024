@@ -8,12 +8,12 @@ SEARCH_RADIUS = 5
 
 class ShapesManager:
     def __init__(self):
-        self.shapes = {Point: [], Segment: [], Polygon: []}  # Словарик для хранения фигур
-        self.temp_items = []  # Список для хранения временных фигур, таких как "предпросмотр"
-        x = symbols('x')
-        f = x ** 2 - 4 * x + 4
-        self.some = [lambdify(x, f, 'numpy')]
-
+        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: []}  # Словарик для хранения фигур
+        self.temp_segments = []
+        self.temp_lines = []
+        self.temp_rays = []
+        self.temp_circles = []
+        
     def add_shape(self, shape):
         self.shapes[type(shape)].append(shape)
 
@@ -35,8 +35,26 @@ class ShapesManager:
                 return shape
         return None
 
+        def add_temp_segment(self, shape):
+        self.temp_segments.append(shape)
+
     def add_temp_line(self, shape):
-        self.temp_items.append(shape)
+        self.temp_lines.append(shape)
+
+    def add_temp_ray(self, shape):
+        self.temp_rays.append(shape)
+
+    def add_temp_circle(self, shape):
+        self.temp_circles.append(shape)
+
+    def clear_temp_segments(self):
+        self.temp_segments = []
 
     def clear_temp_lines(self):
-        self.temp_items = []
+        self.temp_lines = []
+
+    def clear_temp_rays(self):
+        self.temp_rays = []
+
+    def clear_temp_circles(self):
+        self.temp_circles = []
