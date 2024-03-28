@@ -1,4 +1,3 @@
-
 import sympy as sp
 import math
 
@@ -11,6 +10,12 @@ class Shape:
         if color is not None:
             self.color = color
 
+
+class Inf:
+    def __init__(self, x, y, message):
+        self.x = x
+        self.y = y
+        self.message = message
 
 class Point(Shape):
     def __init__(self, x, y, color=(71, 181, 255, 255), owner=None):
@@ -37,7 +42,6 @@ class Point(Shape):
                     color[i] += shape_color[i]
             for i in range(len(color)):
                 color[i] //= len(self.owner)
-        # self.set_color(shape.point_color)
         self.set_color(color)
 
     def distance(self, other_point):
@@ -49,7 +53,7 @@ class Point(Shape):
 
 
 class Segment(Shape):
-    def __init__(self, points=None, color=(6, 40, 61, 255), width=1.5, owner=None):
+    def __init__(self, points=None, color=(23, 52, 175, 255), width=1.5, owner=None):
         super().__init__(color=color)
         self.point_1 = None
         self.point_2 = None
@@ -62,7 +66,7 @@ class Segment(Shape):
             self.add_point(points[1])
 
         self.width = width
-        self.point_color = (255, 220, 51, 255)
+        self.point_color = color  #(255, 220, 51, 255)
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.point_color)
@@ -74,12 +78,9 @@ class Segment(Shape):
             self.point_2 = self.points[1]
             self.segment = sp.Line(self.point_1.point, self.point_2.point)
 
-    def add_to_owner(self, owner):
-        self.owner.append(owner)
-        self.set_color(owner.line_color)
 
 class Line(Shape):
-    def __init__(self, points=None, color=(51, 51, 255, 255), width=1.5, owner=None):
+    def __init__(self, points=None, color=(143, 0, 255, 255), width=1.5, owner=None):  # (51, 51, 255, 255)
         super().__init__(color=color)
         self.point_1 = None
         self.point_2 = None
@@ -92,7 +93,7 @@ class Line(Shape):
             self.add_point(points[1])
 
         self.width = width
-        self.point_color = (127, 0, 255, 255)
+        self.point_color = color  # (127, 0, 255, 255)
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.point_color)
@@ -108,8 +109,9 @@ class Line(Shape):
         self.owner.append(owner)
         self.set_color(owner.line_color)
 
+
 class Ray(Shape):
-    def __init__(self, points=None, color=(255, 51, 153, 255), width=1.5, owner=None):
+    def __init__(self, points=None, color=(206, 82, 200, 255), width=1.5, owner=None):  # (255, 51, 153, 255)
         super().__init__(color=color)
         self.point_1 = None
         self.point_2 = None
@@ -122,7 +124,7 @@ class Ray(Shape):
             self.add_point(points[1])
 
         self.width = width
-        self.point_color = (127, 0, 255, 255)
+        self.point_color = color  #(127, 0, 255, 255)
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.point_color)

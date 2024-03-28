@@ -8,13 +8,13 @@ SEARCH_RADIUS = 5
 
 class ShapesManager:
     def __init__(self):
-        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: []}  # Словарик для хранения фигур
+        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: []}  # Словарик для хранения фигур
         self.temp_segments = []
         self.temp_lines = []
         self.temp_rays = []
         self.temp_circles = []
-
-
+        self.selected_points = []
+        
     def add_shape(self, shape):
         self.shapes[type(shape)].append(shape)
 
@@ -36,6 +36,19 @@ class ShapesManager:
                 return shape
         return None
 
+    @staticmethod
+    def distance(array_points: []):
+        a = array_points[0]
+        b = array_points[1]
+        dist = ((a.x-b.x)**2+(a.y-b.y)**2)**0.5
+        return dist
+
+    def add_selected_point(self, point):
+        self.selected_points.append(point)
+
+    def clear_selected_points(self):
+        self.selected_points = []
+
     def add_temp_segment(self, shape):
         self.temp_segments.append(shape)
 
@@ -44,6 +57,7 @@ class ShapesManager:
 
     def add_temp_ray(self, shape):
         self.temp_rays.append(shape)
+
     def add_temp_circle(self, shape):
         self.temp_circles.append(shape)
 
@@ -55,5 +69,6 @@ class ShapesManager:
 
     def clear_temp_rays(self):
         self.temp_rays = []
+
     def clear_temp_circles(self):
         self.temp_circles = []
