@@ -171,6 +171,17 @@ class Canvas(QGraphicsScene):
             self.draw_circle(shape)
         for shape in self.shapes_manager.shapes[Point]:
             self.draw_point(shape)
+        for text in self.shapes_manager.shapes[Inf]:
+            self.draw_text(text)
+
+    def draw_text(self, text, font="Aptos", size=10, color=(0, 0, 0, 255)):
+        label = QGraphicsTextItem(text.message)
+        font = QFont(font, size)  # Выбираем шрифт для подписей
+        label.setFont(font)
+        label.setDefaultTextColor(QColor(*color))
+        pos_x, pos_y = self.to_scene_coords(text.x, text.y)
+        label.setPos(pos_x, pos_y)  # Позиционирование текста
+        self.addItem(label)
 
     def draw_circle(self, shape):
         scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)

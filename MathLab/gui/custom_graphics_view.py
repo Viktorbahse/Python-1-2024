@@ -20,7 +20,8 @@ class CustomGraphicsView(QGraphicsView):
             'Polygon': self.handle_polygon_creation,
             'Line': self.handle_line_creation,
             'Ray': self.handle_ray_creation,
-            'Circle': self.handle_circle_creation
+            'Circle': self.handle_circle_creation,
+            'Distance': self.handle_distance_tool
         }
 
         self.setRenderHint(QPainter.Antialiasing)  # Включение сглаживания
@@ -87,6 +88,20 @@ class CustomGraphicsView(QGraphicsView):
             if logical_pos is not None:
                 point = Point(logical_pos[0], logical_pos[1])
             self.scene().shapes_manager.add_shape(point)
+
+    def handle_distance_tool(self, logical_pos=None, point=None, closest_point=False):
+        if closest_point:
+            if len(self.scene().shapes_manager.selected_points) == 0:
+                self.scene().shapes_manager.add_selected_point(closest_point)
+            else:
+                self.scene().shapes_manager.add_selected_point(closest_point)
+                message = str(self.scene().shapes_manager.distance(self.scene().shapes_manager.selected_points))
+                x = (self.scene().shapes_manager.selected_points[0].x+self.scene().shapes_manager.selected_points[
+                    1].x) / 2
+                y = (self.scene().shapes_manager.selected_points[0].y + self.scene().shapes_manager.selected_points[
+                    1].y) / 2
+                self.scene().shapes_manager.add_shape(Inf(x, y, message))
+                self.scene().shapes_manager.clear_selected_points()
 
     def handle_line_creation(self,logical_pos, closest_point):
         if self.temp_point is None:  # Выбираем начальную точку линии.
@@ -255,6 +270,11 @@ class CustomGraphicsView(QGraphicsView):
         elif event.key() == Qt.Key_Y:
             if self.current_tool == 'Point':
                 self.current_tool = 'Circle'
+            else:
+                self.current_tool = 'Point'
+        elif event.key() == Qt.Key_U:
+            if self.current_tool == 'Point':
+                self.current_tool = 'Distance'
             else:
                 self.current_tool = 'Point'
         elif event.key() == Qt.Key_Q:
