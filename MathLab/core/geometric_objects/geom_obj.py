@@ -10,6 +10,11 @@ class Shape:
         if color is not None:
             self.color = color
 
+class Inf:
+    def __init__(self, x, y, message):
+        self.x = x
+        self.y = y
+        self.message = message
 
 class Point(Shape):
     def __init__(self, x, y, color=(71, 181, 255, 255), owner=None):
