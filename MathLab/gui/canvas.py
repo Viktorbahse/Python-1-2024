@@ -200,6 +200,8 @@ class Canvas(QGraphicsScene):
         ellipse = QGraphicsEllipseItem(scene_x - radius, scene_y - radius, 2 * radius, 2 * radius)
         ellipse.setBrush(QBrush(QColor(*shape.color)))
         self.addItem(ellipse)
+        text = Inf(shape.x, shape.y, shape.name)
+        self.draw_text(text)
 
     def draw_segment(self, shape):
         # Отрисовка линий

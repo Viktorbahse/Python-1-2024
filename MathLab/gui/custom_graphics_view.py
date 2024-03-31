@@ -105,7 +105,9 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_to_owner(owner=self.current_line)
                 final_point = closest_point
             else:
+                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
             self.current_line.add_point(final_point)
             self.scene().shapes_manager.clear_temp_lines()
@@ -128,7 +130,9 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_to_owner(owner=self.current_ray)
                 final_point = closest_point
             else:
+                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_ray])
+                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
             self.current_ray.add_point(final_point)
             self.scene().shapes_manager.clear_temp_rays()
@@ -141,7 +145,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.scene().shapes_manager.add_selected_point(closest_point)
             else:
                 self.scene().shapes_manager.add_selected_point(closest_point)
-                message = str(self.scene().shapes_manager.distance(self.scene().shapes_manager.selected_points))
+                message = self.scene().shapes_manager.selected_points[0].name + self.scene().shapes_manager.selected_points[1].name+"=" + str(self.scene().shapes_manager.distance(self.scene().shapes_manager.selected_points))
                 x = (self.scene().shapes_manager.selected_points[0].x+self.scene().shapes_manager.selected_points[
                     1].x) / 2
                 y = (self.scene().shapes_manager.selected_points[0].y + self.scene().shapes_manager.selected_points[
@@ -165,7 +169,9 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_to_owner(owner=self.current_circle)
                 final_point = closest_point
             else:
+                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_circle])
+                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
             self.current_circle.add_point(final_point)
             self.scene().shapes_manager.clear_temp_circles()
@@ -191,7 +197,9 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_to_owner(owner=self.current_segment)
                 final_point = closest_point
             else:
+                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_segment])
+                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
             self.current_segment.add_point(final_point)
             self.scene().shapes_manager.clear_temp_segments()
@@ -228,7 +236,10 @@ class CustomGraphicsView(QGraphicsView):
                     self.scene().shapes_manager.add_shape(
                         Segment([last_point, new_point], owner=[self.current_polygon]))
                 self.polygon_points.append(new_point)
+                if len(self.polygon_points)==1:
+                    new_point.previous_name()
                 self.current_polygon.add_point(new_point)
+
 
         self.scene().shapes_manager.clear_temp_segments()
 
