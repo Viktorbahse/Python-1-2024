@@ -5,53 +5,58 @@ class DockTools(QDockWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Tools")
+        self.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)  # Убирает кнопку закрытия
+        self.setMinimumWidth(200)
 
         self.edFunc = QLineEdit(self)
-
-        self.actionModePoint = QAction("Point", self)
-        self.actionModePoint.setCheckable(True)
-        self.actionModePoint.setToolTip("Set mode Point")
-        self.actionModePoint.setStatusTip("Set mode Point")
-
-        self.actionModeLine = QAction("Line", self)
-        self.actionModeLine.setCheckable(True)
-        self.actionModeLine.setToolTip("Set mode Line")
-        self.actionModeLine.setStatusTip("Set mode Line")
-
-        self.actionModePolygon = QAction("Polygon", self)
-        self.actionModePolygon.setCheckable(True)
-        self.actionModePolygon.setToolTip("Set mode Polygon")
-        self.actionModePolygon.setStatusTip("Set mode Polygon")
+        self.edFunc.setMinimumHeight(30)
 
         self.grpMode = QActionGroup(self)
-        self.grpMode.addAction(self.actionModePoint)
-        self.grpMode.addAction(self.actionModeLine)
-        self.grpMode.addAction(self.actionModePolygon)
-
 
         self.wgt = QWidget(self)
         self.lay = QVBoxLayout(self.wgt)
         self.lay.setContentsMargins(0, 0, 0, 0)
         self.lay.setSpacing(0)
-        self.wgt.setLayout(self.lay)
-
         self.lay.addWidget(self.edFunc)
 
-        self.btnPoint = QToolButton()
-        self.btnPoint.setDefaultAction(self.actionModePoint)
-        self.btnPoint.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        self.lay.addWidget(self.btnPoint)
+        self.tools = [
+            {"name": "MOVE", "tooltip": "Set mode move", "statusTip": "Set mode Move"},
+            {"name": "Point", "tooltip": "Set mode Point", "statusTip": "Set mode Point"},
+            {"name": "Segment", "tooltip": "Set mode Segment", "statusTip": "Set mode Segment"},
+            {"name": "Line", "tooltip": "Set mode Line", "statusTip": "Set mode Line"},
+            {"name": "Ray", "tooltip": "Set mode Ray", "statusTip": "Set mode Ray"},
+            {"name": "Polygon", "tooltip": "Set mode Polygon", "statusTip": "Set mode Polygon"},
+            {"name": "Circle", "tooltip": "Set mode Circle", "statusTip": "Set mode Circle"},
+        ]
 
-        self.btnLine = QToolButton()
-        self.btnLine.setDefaultAction(self.actionModeLine)
-        self.btnLine.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        self.lay.addWidget(self.btnLine)
-
-        self.btnPolygon = QToolButton()
-        self.btnPolygon.setDefaultAction(self.actionModePolygon)
-        self.btnPolygon.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        self.lay.addWidget(self.btnPolygon)
+        for tool in self.tools:
+            self.add_tool(tool)
 
         self.lay.addStretch()
-
         self.setWidget(self.wgt)
+
+    def add_tool(self, tool_info):
+        action = QAction(tool_info["name"], self)
+        action.setCheckable(True)
+        action.setToolTip(tool_info["tooltip"])
+        action.setStatusTip(tool_info["statusTip"])
+        self.grpMode.addAction(action)
+
+        self.create_tool_button(action)
+
+    def create_tool_button(self, action, height=30):
+        button = QToolButton()
+        button.setDefaultAction(action)
+        button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        button.setMinimumHeight(height)
+        self.lay.addWidget(button)
+
+    def set_active_tool(self, tool_name):
+        for action in self.grpMode.actions():
+            if action.text() == tool_name:
+                action.setChecked(True)
+                break
+
+    def connect_actions(self, tool_selected_callback):
+        for action in self.grpMode.actions():
+            action.triggered.connect(lambda checked, a=action: tool_selected_callback(a.text()))
