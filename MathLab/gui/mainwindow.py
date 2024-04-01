@@ -1,6 +1,9 @@
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction
 from PyQt5.QtCore import Qt
 from gui.custom_graphics_view import CustomGraphicsView
+from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction
+from PyQt5.QtCore import Qt
+from gui.custom_graphics_view import CustomGraphicsView
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
 
