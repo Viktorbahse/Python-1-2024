@@ -20,6 +20,7 @@ class DockTools(QDockWidget):
         self.lay.addWidget(self.edFunc)
 
         self.tools = [
+            {"name": "MOVE", "tooltip": "Set mode move", "statusTip": "Set mode Move"},
             {"name": "Point", "tooltip": "Set mode Point", "statusTip": "Set mode Point"},
             {"name": "Segment", "tooltip": "Set mode Segment", "statusTip": "Set mode Segment"},
             {"name": "Line", "tooltip": "Set mode Line", "statusTip": "Set mode Line"},
