@@ -9,12 +9,14 @@ from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
 class CustomGraphicsView(QGraphicsView):
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
-        self.current_tool = 'Point'  # Текущий инструмент
+        self.startMove = False
+        self.current_tool = 'MOVE'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
         self.temp_point = None  # Временная точка для начала сегмента.
 
         # Связывает название инструмента с методом, который будет вызван при нажатии на мышку при этом инструменте
         self.tools = {
+            'MOVE': self.handle_move_canvas,
             'Point': self.handle_point_creation,
             'Segment': self.handle_segment_creation,
             'Polygon': self.handle_polygon_creation,
@@ -26,18 +28,6 @@ class CustomGraphicsView(QGraphicsView):
 
         self.setRenderHint(QPainter.Antialiasing)  # Включение сглаживания
         self.setMouseTracking(True)
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        scene_pos = self.mapToScene(event.pos())  # Преобразует координаты курсора в координаты сцены
-        logical_pos = self.scene().to_logical_coords(scene_pos.x(),
-                                                     scene_pos.y())  # Преобразует координаты сцены в логические координаты
-
-        # print(f"Logical coordinates: {logical_pos}")
-        # print(f"scene_pos: {scene_pos.x(), scene_pos.y()}")
-
-        self.initiate_temp_shape_drawing(logical_pos)
-        self.scene().update_scene()
 
     def initiate_temp_shape_drawing(self, logical_pos):
         #Инициирует отрисовку временной фигуры в зависимости от инструмента, который выбран
@@ -82,12 +72,29 @@ class CustomGraphicsView(QGraphicsView):
         segment = Segment(points=[point_1, point_2], color=color)
         self.scene().shapes_manager.add_temp_segment(segment)
 
+    def handle_move_canvas(self, logical_pos=None, point=None, closest_point=False):
+        print('handle_move_canvas')
+
     def handle_point_creation(self, logical_pos=None, point=None, closest_point=False):
         # Добавляет точку на сцену
         if not closest_point:  # Добавляет новую только тогда, когда не найдена точка в ближайшем радиусе
             if logical_pos is not None:
                 point = Point(logical_pos[0], logical_pos[1])
             self.scene().shapes_manager.add_shape(point)
+
+    def handle_distance_tool(self, logical_pos=None, point=None, closest_point=False):
+        if closest_point:
+            if len(self.scene().shapes_manager.selected_points) == 0:
+                self.scene().shapes_manager.add_selected_point(closest_point)
+            else:
+                self.scene().shapes_manager.add_selected_point(closest_point)
+                message = str(self.scene().shapes_manager.distance(self.scene().shapes_manager.selected_points))
+                x = (self.scene().shapes_manager.selected_points[0].x+self.scene().shapes_manager.selected_points[
+                    1].x) / 2
+                y = (self.scene().shapes_manager.selected_points[0].y + self.scene().shapes_manager.selected_points[
+                    1].y) / 2
+                self.scene().shapes_manager.add_shape(Inf(x, y, message))
+                self.scene().shapes_manager.clear_selected_points()
 
     def handle_line_creation(self,logical_pos, closest_point):
         if self.temp_point is None:  # Выбираем начальную точку линии.
@@ -138,20 +145,6 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().shapes_manager.clear_temp_rays()
             self.scene().shapes_manager.add_shape(self.current_ray)
             self.temp_point = None
-
-    def handle_distance_tool(self, logical_pos=None, point=None, closest_point=False):
-        if closest_point:
-            if len(self.scene().shapes_manager.selected_points) == 0:
-                self.scene().shapes_manager.add_selected_point(closest_point)
-            else:
-                self.scene().shapes_manager.add_selected_point(closest_point)
-                message = self.scene().shapes_manager.selected_points[0].name + self.scene().shapes_manager.selected_points[1].name+"=" + str(self.scene().shapes_manager.distance(self.scene().shapes_manager.selected_points))
-                x = (self.scene().shapes_manager.selected_points[0].x+self.scene().shapes_manager.selected_points[
-                    1].x) / 2
-                y = (self.scene().shapes_manager.selected_points[0].y + self.scene().shapes_manager.selected_points[
-                    1].y) / 2
-                self.scene().shapes_manager.add_shape(Inf(x, y, message))
-                self.scene().shapes_manager.clear_selected_points()
 
     def handle_circle_creation(self, logical_pos, closest_point):
         if self.temp_point is None:  # Устанавливаем центр круга.
@@ -236,13 +229,11 @@ class CustomGraphicsView(QGraphicsView):
                     self.scene().shapes_manager.add_shape(
                         Segment([last_point, new_point], owner=[self.current_polygon]))
                 self.polygon_points.append(new_point)
-                if len(self.polygon_points)==1:
+                if len(self.polygon_points) == 1:
                     new_point.previous_name()
                 self.current_polygon.add_point(new_point)
 
-
         self.scene().shapes_manager.clear_temp_segments()
-
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         scene_pos = self.mapToScene(event.pos())
@@ -251,7 +242,35 @@ class CustomGraphicsView(QGraphicsView):
         closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
                                                                        10 / self.scene().zoom_factor)  # Ближайшие точки
         self.tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
+        if self.current_tool == 'MOVE':
+            self.startMove = True
+            self.startMovePoint = scene_pos
+            self.saveBasePointX = self.scene().base_point[0]
+            self.saveBasePointY = self.scene().base_point[1]
+        else:
+            self.tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
         self.scene().update_scene()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        scene_pos = self.mapToScene(event.pos())  # Преобразует координаты курсора в координаты сцены
+        logical_pos = self.scene().to_logical_coords(scene_pos.x(),
+                                                     scene_pos.y())  # Преобразует координаты сцены в логические координаты
+
+        # print(f"Logical coordinates: {logical_pos}")
+        # print(f"scene_pos: {scene_pos.x(), scene_pos.y()}")
+
+        if self.current_tool == 'MOVE' and self.startMove:
+            delta = (scene_pos - self.startMovePoint)
+            self.scene().base_point[0] = self.saveBasePointX + delta.x()
+            self.scene().base_point[1] = self.saveBasePointY + delta.y()
+
+        self.initiate_temp_shape_drawing(logical_pos)
+        self.scene().update_scene()
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self.startMove = False
 
     def keyPressEvent(self, event):
         step = 10
@@ -278,14 +297,14 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_tool = 'Ray'
             else:
                 self.current_tool = 'Point'
-        elif event.key() == Qt.Key_U:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Distance'
-            else:
-                self.current_tool = 'Point'
         elif event.key() == Qt.Key_Y:
             if self.current_tool == 'Point':
                 self.current_tool = 'Circle'
+            else:
+                self.current_tool = 'Point'
+        elif event.key() == Qt.Key_U:
+            if self.current_tool == 'Point':
+                self.current_tool = 'Distance'
             else:
                 self.current_tool = 'Point'
         elif event.key() == Qt.Key_Q:
