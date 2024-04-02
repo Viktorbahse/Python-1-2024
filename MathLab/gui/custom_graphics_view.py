@@ -10,13 +10,13 @@ class CustomGraphicsView(QGraphicsView):
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
         self.startMove = False
-        self.current_tool = 'MOVE'  # Текущий инструмент
+        self.current_tool = 'Move'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
         self.temp_point = None  # Временная точка для начала сегмента.
 
         # Связывает название инструмента с методом, который будет вызван при нажатии на мышку при этом инструменте
         self.tools = {
-            'MOVE': self.handle_move_canvas,
+            'Move': self.handle_move_canvas,
             'Point': self.handle_point_creation,
             'Segment': self.handle_segment_creation,
             'Polygon': self.handle_polygon_creation,
@@ -82,20 +82,6 @@ class CustomGraphicsView(QGraphicsView):
                 point = Point(logical_pos[0], logical_pos[1])
             self.scene().shapes_manager.add_shape(point)
 
-    def handle_distance_tool(self, logical_pos=None, point=None, closest_point=False):
-        if closest_point:
-            if len(self.scene().shapes_manager.selected_points) == 0:
-                self.scene().shapes_manager.add_selected_point(closest_point)
-            else:
-                self.scene().shapes_manager.add_selected_point(closest_point)
-                message = str(self.scene().shapes_manager.distance(self.scene().shapes_manager.selected_points))
-                x = (self.scene().shapes_manager.selected_points[0].x+self.scene().shapes_manager.selected_points[
-                    1].x) / 2
-                y = (self.scene().shapes_manager.selected_points[0].y + self.scene().shapes_manager.selected_points[
-                    1].y) / 2
-                self.scene().shapes_manager.add_shape(Inf(x, y, message))
-                self.scene().shapes_manager.clear_selected_points()
-
     def handle_line_creation(self,logical_pos, closest_point):
         if self.temp_point is None:  # Выбираем начальную точку линии.
             self.current_line = Line()  # Создаем пустую линию.
@@ -146,6 +132,22 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().shapes_manager.add_shape(self.current_ray)
             self.temp_point = None
 
+    def handle_distance_tool(self, logical_pos=None, point=None, closest_point=False):
+        if closest_point:
+            if len(self.scene().shapes_manager.selected_points) == 0:
+                self.scene().shapes_manager.add_selected_point(closest_point)
+            else:
+                self.scene().shapes_manager.add_selected_point(closest_point)
+                message = self.scene().shapes_manager.selected_points[0].name + \
+                          self.scene().shapes_manager.selected_points[1].name + "=" + str(
+                    self.scene().shapes_manager.distance(self.scene().shapes_manager.selected_points))
+                x = (self.scene().shapes_manager.selected_points[0].x + self.scene().shapes_manager.selected_points[
+                    1].x) / 2
+                y = (self.scene().shapes_manager.selected_points[0].y + self.scene().shapes_manager.selected_points[
+                    1].y) / 2
+                self.scene().shapes_manager.add_shape(Inf(x, y, message))
+                self.scene().shapes_manager.clear_selected_points()
+
     def handle_circle_creation(self, logical_pos, closest_point):
         if self.temp_point is None:  # Устанавливаем центр круга.
             self.current_circle = Circle()  # Создаем пока пустой круг.
@@ -170,7 +172,6 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().shapes_manager.clear_temp_circles()
             self.scene().shapes_manager.add_shape(self.current_circle)
             self.temp_point = None
-
 
     def handle_segment_creation(self, logical_pos, closest_point):
         # Обрабатывает создание отрезка
@@ -234,6 +235,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_polygon.add_point(new_point)
 
         self.scene().shapes_manager.clear_temp_segments()
+
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         scene_pos = self.mapToScene(event.pos())
@@ -241,8 +243,8 @@ class CustomGraphicsView(QGraphicsView):
 
         closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
                                                                        10 / self.scene().zoom_factor)  # Ближайшие точки
-        self.tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
-        if self.current_tool == 'MOVE':
+
+        if self.current_tool == 'Move':
             self.startMove = True
             self.startMovePoint = scene_pos
             self.saveBasePointX = self.scene().base_point[0]
@@ -260,7 +262,7 @@ class CustomGraphicsView(QGraphicsView):
         # print(f"Logical coordinates: {logical_pos}")
         # print(f"scene_pos: {scene_pos.x(), scene_pos.y()}")
 
-        if self.current_tool == 'MOVE' and self.startMove:
+        if self.current_tool == 'Move' and self.startMove:
             delta = (scene_pos - self.startMovePoint)
             self.scene().base_point[0] = self.saveBasePointX + delta.x()
             self.scene().base_point[1] = self.saveBasePointY + delta.y()

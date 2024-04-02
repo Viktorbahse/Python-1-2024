@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
         self.dockTools = DockTools()
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dockTools)
 
-        self.dockTools.set_active_tool("Point")
+        self.dockTools.set_active_tool("Move")
         self.dockTools.edFunc.textChanged.connect(self.testEdFunc)
         self.dockTools.connect_actions(self.tool_selected)
 

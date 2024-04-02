@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QDockWidget, QVBoxLayout, QWidget, QToolButton, QActionGroup, QAction, QSizePolicy, QLineEdit
 from PyQt5.QtCore import Qt
 
+
 class DockTools(QDockWidget):
     def __init__(self):
         super().__init__()
@@ -20,13 +21,14 @@ class DockTools(QDockWidget):
         self.lay.addWidget(self.edFunc)
 
         self.tools = [
-            {"name": "MOVE", "tooltip": "Set mode move", "statusTip": "Set mode Move"},
+            {"name": "Move", "tooltip": "Set mode move", "statusTip": "Set mode Move"},
             {"name": "Point", "tooltip": "Set mode Point", "statusTip": "Set mode Point"},
             {"name": "Segment", "tooltip": "Set mode Segment", "statusTip": "Set mode Segment"},
             {"name": "Line", "tooltip": "Set mode Line", "statusTip": "Set mode Line"},
             {"name": "Ray", "tooltip": "Set mode Ray", "statusTip": "Set mode Ray"},
             {"name": "Polygon", "tooltip": "Set mode Polygon", "statusTip": "Set mode Polygon"},
             {"name": "Circle", "tooltip": "Set mode Circle", "statusTip": "Set mode Circle"},
+            {"name": "Distance", "tooltip": "Set mode distance", "statusTip": "Set mode Distance"},
         ]
 
         for tool in self.tools:
