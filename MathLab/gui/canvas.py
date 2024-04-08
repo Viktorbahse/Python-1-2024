@@ -7,14 +7,14 @@ import math
 
 
 class Canvas(QGraphicsScene):
-    def __init__(self, parent=None, zoom_factor=50.0):
+    def __init__(self, width, height, parent=None, zoom_factor=50.0):
         super().__init__(parent)
-        self.setSceneRect(0, 0, 1000 - 2, 800 - 2)
+        self.setSceneRect(0, 0, width - 2, height - 2)
 
         self.shapes_manager = ShapesManager()
         self.zoom_factor = zoom_factor
         self.grid_step = 1
-        self.base_point = [0, 0]
+        self.base_point = [-100, 0]
 
         self.initial_scene_x1, _ = self.to_scene_coords(self.grid_step, 0)  # Координаты первой от базовой точки линии
         self.initial_scene_x2, _ = self.to_scene_coords(self.grid_step * 2, 0)  # Второй линии
@@ -111,7 +111,7 @@ class Canvas(QGraphicsScene):
     def draw_grid(self):
         # Отрисовка сетки
         self.clear()
-        pen = QPen(Qt.gray, 0.5)
+        pen = QPen(QColor(80, 80, 80), 0.5)
         step = self.grid_step
 
         width = self.sceneRect().width()
@@ -215,7 +215,7 @@ class Canvas(QGraphicsScene):
         scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
         scene_x, scene_y = self.to_scene_coords(shape.point_2.x, shape.point_2.y)
         if scene_x1 == scene_x:
-            if scene_y>scene_y1:
+            if scene_y > scene_y1:
                 line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, self.sceneRect().height())
             else:
                 line = QGraphicsLineItem(scene_x1, 0, scene_x, scene_y1)
@@ -226,7 +226,7 @@ class Canvas(QGraphicsScene):
             intercept = shape.point_2.y - slope * shape.point_2.x
             x1, y1 = self.to_logical_coords(0, 0)  # координаты верхнего левого угла
             x2, y2 = self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())
-            if scene_x>scene_x1:
+            if scene_x > scene_x1:
                 scene_x, scene_y = self.to_scene_coords(x2, slope * (x2) + intercept)
                 line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
             else:
@@ -252,7 +252,6 @@ class Canvas(QGraphicsScene):
             line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
-
 
     def draw_temp_shapes(self):
         # Отрисовка временных линий (предпросмотр)
