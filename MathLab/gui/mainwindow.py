@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, Q
 from PyQt5.QtCore import Qt
 from gui.custom_graphics_view import CustomGraphicsView
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSize
 from gui.custom_graphics_view import CustomGraphicsView
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
@@ -12,10 +12,14 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MathLab")
+        self.setMinimumSize(QSize(600, 400))
         self.setGeometry(100, 100, 1200, 800)
-
         self.initUI()
         self.initMenu()
+    def resizeEvent(self, event):
+        new_size = event.size()  # получаем новый размер окна
+        self.scene.setSceneRect(0, 0, new_size.width() - 2, new_size.height() - 2)
+        self.view.setFixedSize(new_size.width() - 2, new_size.height() - 2)
 
     def initUI(self):
         self.central_widget = QWidget()
@@ -24,7 +28,7 @@ class MainWindow(QMainWindow):
         self.layout = QVBoxLayout()
         self.central_widget.setLayout(self.layout)
 
-        self.scene = Canvas()
+        self.scene = Canvas(self.width(), self.height())
         self.view = CustomGraphicsView(self.scene)
         self.view.setFixedSize(1000, 800)
 

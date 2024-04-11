@@ -13,6 +13,7 @@ class CustomGraphicsView(QGraphicsView):
         self.current_tool = 'Move'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
         self.temp_point = None  # Временная точка для начала сегмента.
+        self.grid_gravity_mode = True
 
         # Связывает название инструмента с методом, который будет вызван при нажатии на мышку при этом инструменте
         self.tools = {
@@ -30,8 +31,7 @@ class CustomGraphicsView(QGraphicsView):
         self.setMouseTracking(True)
 
     def initiate_temp_shape_drawing(self, logical_pos):
-        #Инициирует отрисовку временной фигуры в зависимости от инструмента, который выбран
-
+        # Инициирует отрисовку временной фигуры в зависимости от инструмента, который выбран
         if self.temp_point is not None and self.current_tool in ['Segment', 'Line', 'Ray', 'Circle']:
             tools = {
                 'Segment': self.draw_temp_segment,
@@ -82,7 +82,7 @@ class CustomGraphicsView(QGraphicsView):
                 point = Point(logical_pos[0], logical_pos[1])
             self.scene().shapes_manager.add_shape(point)
 
-    def handle_line_creation(self,logical_pos, closest_point):
+    def handle_line_creation(self, logical_pos, closest_point):
         if self.temp_point is None:  # Выбираем начальную точку линии.
             self.current_line = Line()  # Создаем пустую линию.
             if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
@@ -108,7 +108,7 @@ class CustomGraphicsView(QGraphicsView):
             self.temp_point = None
 
     def handle_ray_creation(self, logical_pos, closest_point):
-        if self.temp_point is None:  #Выбираем начальную точку луча.
+        if self.temp_point is None:  # Выбираем начальную точку луча.
             self.current_ray = Ray()  # Создаем пока пустой луч(без направления).
             if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
                 closest_point.add_to_owner(owner=self.current_ray)
@@ -240,10 +240,12 @@ class CustomGraphicsView(QGraphicsView):
         super().mousePressEvent(event)
         scene_pos = self.mapToScene(event.pos())
         logical_pos = self.scene().to_logical_coords(scene_pos.x(), scene_pos.y())
-
         closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
                                                                        10 / self.scene().zoom_factor)  # Ближайшие точки
-
+        if self.grid_gravity_mode:
+            gravity_coordinates= round(logical_pos[0] / self.scene().grid_step) * self.scene().grid_step, round(logical_pos[1] / self.scene().grid_step) * self.scene().grid_step
+            if self.scene().shapes_manager.distance([Point(gravity_coordinates[0], gravity_coordinates[1]), Point(logical_pos[0], logical_pos[1])]) < self.scene().grid_step/4:
+                logical_pos=gravity_coordinates
         if self.current_tool == 'Move':
             self.startMove = True
             self.startMovePoint = scene_pos
