@@ -9,7 +9,7 @@ import math
 class Canvas(QGraphicsScene):
     def __init__(self, width, height, parent=None, zoom_factor=50.0):
         super().__init__(parent)
-        self.setSceneRect(0, 0, width - 2, height - 2)
+        self.setSceneRect(0, 0, width - 15, height - 15)
 
         self.shapes_manager = ShapesManager()
         self.zoom_factor = zoom_factor
