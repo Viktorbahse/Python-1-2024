@@ -14,7 +14,7 @@ class Canvas(QGraphicsScene):
         self.shapes_manager = ShapesManager()
         self.zoom_factor = zoom_factor
         self.grid_step = 1
-        self.base_point = [-100, 0]
+        self.base_point = [0, 0]
 
         self.initial_scene_x1, _ = self.to_scene_coords(self.grid_step, 0)  # Координаты первой от базовой точки линии
         self.initial_scene_x2, _ = self.to_scene_coords(self.grid_step * 2, 0)  # Второй линии
