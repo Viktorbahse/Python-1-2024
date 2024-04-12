@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsView
+from PyQt5.QtWidgets import QGraphicsView, QShortcut
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeySequence
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
@@ -291,33 +292,20 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().base_point[0] += step
         elif event.key() == Qt.Key_D:
             self.scene().base_point[0] -= step
-        elif event.key() == Qt.Key_E:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Line'
-            else:
-                self.current_tool = 'Point'
-        elif event.key() == Qt.Key_R:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Ray'
-            else:
-                self.current_tool = 'Point'
-        elif event.key() == Qt.Key_Y:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Circle'
-            else:
-                self.current_tool = 'Point'
-        elif event.key() == Qt.Key_U:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Distance'
-            else:
-                self.current_tool = 'Point'
-        elif event.key() == Qt.Key_Q:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Segment'
-            elif self.current_tool == 'Segment':
-                self.current_tool = 'Polygon'
-            else:
-                self.current_tool = 'Point'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_E:
+            self.current_tool = 'Line'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_R:
+            self.current_tool = 'Ray'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_T:
+            self.current_tool = 'Circle'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_F:
+            self.current_tool = 'Distance'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_G:
+            self.current_tool = 'Point'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_H:
+            self.current_tool = 'Segment'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Y:
+            self.current_tool = 'Polygon'
 
         self.scene().update_scene()
         super().keyPressEvent(event)
