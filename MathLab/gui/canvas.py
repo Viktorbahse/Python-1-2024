@@ -5,12 +5,13 @@ from core.shapes_manager import ShapesManager
 from core.geometric_objects.figure import *
 from tests.test_distances import *
 import math
+import time
 
 
 class Canvas(QGraphicsScene):
-    def __init__(self, parent=None, zoom_factor=50.0):
+    def __init__(self, width, height, parent=None, zoom_factor=50.0):
         super().__init__(parent)
-        self.setSceneRect(0, 0, 1000 - 2, 800 - 2)
+        self.setSceneRect(0, 0, width - 15, height - 15)
 
         self.shapes_manager = ShapesManager()
         self.zoom_factor = zoom_factor
@@ -149,7 +150,7 @@ class Canvas(QGraphicsScene):
     def draw_grid(self):
         # Отрисовка сетки
         self.clear()
-        pen = QPen(Qt.gray, 0.5)
+        pen = QPen(QColor(80, 80, 80), 0.5)
         step = self.grid_step
 
         width = self.sceneRect().width()

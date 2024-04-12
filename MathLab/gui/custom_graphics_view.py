@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsView
+from PyQt5.QtWidgets import QGraphicsView, QShortcut
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeySequence
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
@@ -17,6 +18,7 @@ class CustomGraphicsView(QGraphicsView):
         self.current_tool = 'Move'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
         self.temp_point = None  # Временная точка для начала сегмента.
+        self.grid_gravity_mode = True
 
         # Связывает название инструмента для рисования с методом, который будет вызван при нажатии на мышку при этом инструменте
         self.drawing_tools = {
@@ -223,10 +225,13 @@ class CustomGraphicsView(QGraphicsView):
         super().mousePressEvent(event)
         scene_pos = self.mapToScene(event.pos())
         logical_pos = self.scene().to_logical_coords(scene_pos.x(), scene_pos.y())
-
         closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
                                                                        10 / self.scene().zoom_factor)  # Ближайшие точки
-
+        if self.grid_gravity_mode:
+            gravity_coordinates = (round(logical_pos[0] / self.scene().grid_step) * self.scene().grid_step,
+                                   round(logical_pos[1] / self.scene().grid_step) * self.scene().grid_step)
+            if self.scene().shapes_manager.distance([Point(gravity_coordinates[0], gravity_coordinates[1]), Point(logical_pos[0], logical_pos[1])]) < self.scene().grid_step / 4:
+                logical_pos = gravity_coordinates
         if self.current_tool in self.drawing_tools:
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
         else:
@@ -275,33 +280,20 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().base_point[0] += step
         elif event.key() == Qt.Key_D:
             self.scene().base_point[0] -= step
-        elif event.key() == Qt.Key_E:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Line'
-            else:
-                self.current_tool = 'Point'
-        elif event.key() == Qt.Key_R:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Ray'
-            else:
-                self.current_tool = 'Point'
-        elif event.key() == Qt.Key_Y:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Circle'
-            else:
-                self.current_tool = 'Point'
-        elif event.key() == Qt.Key_U:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Distance'
-            else:
-                self.current_tool = 'Point'
-        elif event.key() == Qt.Key_Q:
-            if self.current_tool == 'Point':
-                self.current_tool = 'Segment'
-            elif self.current_tool == 'Segment':
-                self.current_tool = 'Polygon'
-            else:
-                self.current_tool = 'Point'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_E:
+            self.current_tool = 'Line'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_R:
+            self.current_tool = 'Ray'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_T:
+            self.current_tool = 'Circle'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_F:
+            self.current_tool = 'Distance'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_G:
+            self.current_tool = 'Point'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_H:
+            self.current_tool = 'Segment'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Y:
+            self.current_tool = 'Polygon'
 
         self.scene().update_scene()
         super().keyPressEvent(event)
