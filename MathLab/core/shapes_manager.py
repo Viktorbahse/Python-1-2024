@@ -8,11 +8,11 @@ SEARCH_RADIUS = 5
 
 class ShapesManager:
     def __init__(self):
-        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: []}  # Словарик для хранения фигур
-        self.temp_segments = []
-        self.temp_lines = []
-        self.temp_rays = []
-        self.temp_circles = []
+        # Словарик для хранения фигур
+        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: []}
+        # Словарик для временных фигур
+        self.temp_shapes = {Segment: [], Line: [], Ray: [], Circle: []}
+
         self.selected_points = []
         
     def add_shape(self, shape):
@@ -28,6 +28,17 @@ class ShapesManager:
             if shape.contains_point(x, y, radius):
                 return shape
         return
+
+    def add_temp_shape(self, shape):
+        shape_type = type(shape)
+        self.temp_shapes[shape_type].append(shape)
+
+    def clear_temp_shapes(self, shape_type=None):
+        if shape_type:
+            self.temp_shapes[shape_type].clear()
+        else:
+            for shapes in self.temp_shapes.values():
+                shapes.clear()
 
     def find_closest_point(self, x, y, radius=SEARCH_RADIUS):
         # Поиск ближайшей точки в заданном радиусе
@@ -49,26 +60,6 @@ class ShapesManager:
     def clear_selected_points(self):
         self.selected_points = []
 
-    def add_temp_segment(self, shape):
-        self.temp_segments.append(shape)
 
-    def add_temp_line(self, shape):
-        self.temp_lines.append(shape)
-
-    def add_temp_ray(self, shape):
-        self.temp_rays.append(shape)
-
-    def add_temp_circle(self, shape):
-        self.temp_circles.append(shape)
-
-    def clear_temp_segments(self):
-        self.temp_segments = []
-
-    def clear_temp_lines(self):
-        self.temp_lines = []
-
-    def clear_temp_rays(self):
-        self.temp_rays = []
-
-    def clear_temp_circles(self):
-        self.temp_circles = []
+# TODO: Перемести add_selected_point и clear_selected_points после clear_temp_shapes.
+# Хочу, чтобы у нас была некоторая логика в порядке функций (когда я меняю порядок, то функции записываются на меня)
