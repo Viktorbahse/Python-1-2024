@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem
-from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QGraphicsPathItem
+from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
+from PyQt5.QtCore import Qt, QPointF, QLineF
 from core.shapes_manager import ShapesManager
 from core.geometric_objects.figure import *
 from tests.test_distances import *
@@ -9,17 +9,22 @@ import time
 
 
 class Canvas(QGraphicsScene):
-    def __init__(self, width, height, parent=None, zoom_factor=50.0):
+    def __init__(self, width, height, parent=None, zoom_factor=60.0):
         super().__init__(parent)
-        self.setSceneRect(0, 0, width - 2, height - 2)
+        self.setSceneRect(0, 0, width, height)
 
         self.shapes_manager = ShapesManager()
         self.zoom_factor = zoom_factor
         self.grid_step = 1
         self.base_point = [0, 0]
 
+        self.draw_minor_gridlines = True  # Включает отрисовку мелкой сетки
+
         self.canvas_logical_width = abs(self.to_logical_coords(0, 0)[0] -
                                         self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())[0])
+        self.lower_width = self.canvas_logical_width / 2
+        self.upper_width = self.canvas_logical_width * 2
+
         self.update_scene()  # Полное обновление сцены
 
     def to_logical_coords(self, scene_x, scene_y):
@@ -41,22 +46,22 @@ class Canvas(QGraphicsScene):
         self.grid_step_setting()
 
     def grid_step_setting(self):  # настройка шага сетки
-        new_canvas_logical_width = abs(self.to_logical_coords(0, 0)[0] -
-                                       self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())[0])
-        if not ((new_canvas_logical_width * 2 <= self.canvas_logical_width) or
-                (new_canvas_logical_width / 2 >= self.canvas_logical_width)):
-            return
-        if new_canvas_logical_width / 2 >= self.canvas_logical_width:
-            # Условие для увеличения шага сетки
-            self.grid_step *= 2
-            self.grid_step = self.pretty_step_increase(self.grid_step)
-        elif new_canvas_logical_width * 2 <= self.canvas_logical_width:
-            # Условие для уменьшения шага сетки
-            self.grid_step /= 2
-            self.grid_step = self.pretty_step_decrease(self.grid_step)
+        current_width = abs(self.to_logical_coords(0, 0)[0] -
+                            self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())[0])
 
-        self.canvas_logical_width = abs(self.to_logical_coords(0, 0)[0] -
-                                        self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())[0])
+        # Проверяем, нужно ли обновить шаг сетки
+        if current_width <= self.lower_width:
+            # Уменьшаем шаг сетки и обновляем пороги
+            self.grid_step /= 2
+            self.upper_width = self.lower_width
+            self.lower_width /= 2
+        elif current_width >= self.upper_width:
+            # Увеличиваем шаг сетки и обновляем пороги
+            self.grid_step *= 2
+            self.lower_width = self.upper_width
+            self.upper_width *= 2
+
+        self.canvas_logical_width = current_width
 
     def pretty_step_increase(self, step):
         # Определяет следующее большее "красивое" значение
@@ -100,7 +105,7 @@ class Canvas(QGraphicsScene):
         for shape in self.shapes_manager.shapes[Point]:
             self.draw_point(shape)
         for text in self.shapes_manager.shapes[Inf]:
-            self.draw_text(text.message, *self.to_scene_coords(text.x, text.y))
+            self.draw_text(text.message, *self.to_scene_coords(text.x, text.y), center_x=True, center_y=True)
 
     def draw_temp_shapes(self):
         # Отрисовка временных линий (предпросмотр)
@@ -114,26 +119,27 @@ class Canvas(QGraphicsScene):
             self.draw_circle(shape)
 
     def draw_coordinate_axes(self, color=(0, 0, 0, 255)):
-        start_time = time.perf_counter()
-        x1, y1 = self.to_logical_coords(self.sceneRect().width() / 2 + self.base_point[0], 0)
-        x2, y2 = self.to_logical_coords(self.sceneRect().width() / 2 + self.base_point[0], self.sceneRect().height())
-        mid_time1 = time.perf_counter()
+        center_x = self.sceneRect().width() / 2 + self.base_point[0]
+        center_y = self.sceneRect().height() / 2 + self.base_point[1]
+        width = self.sceneRect().width()
+        height = self.sceneRect().height()
 
-        self.draw_segment(Segment([Point(x1, y1), Point(x2, y2)], color))
-        mid_time2 = time.perf_counter()
+        # Рисуем оси
+        # Пыталась использовать уже написанный метод, но как и draw_segment функция работала очень долго
+        self.addLine(center_x, 0, center_x, height, QPen(QColor(*color), 1))
+        self.addLine(0, center_y, width, center_y, QPen(QColor(*color), 1))
 
-        x1, y1 = self.to_logical_coords(0, self.sceneRect().height() / 2 + self.base_point[1])
-        x2, y2 = self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height() / 2 + self.base_point[1])
-        mid_time3 = time.perf_counter()
+        arrow_length = 10  # длина стрелочки
 
-        self.draw_segment(Segment([Point(x1, y1), Point(x2, y2)], color))
-        mid_time4 = time.perf_counter()
+        # Стрелочки для x
+        self.addLine(width - arrow_length - 2, center_y,
+                     width - 2 * arrow_length - 2, center_y + arrow_length / 2, QPen(QColor(*color), 1))
+        self.addLine(width - arrow_length - 2, center_y,
+                     width - 2 * arrow_length - 2, center_y - arrow_length / 2, QPen(QColor(*color), 1))
 
-        # print(f'first: {(mid_time1 - start_time) * 1000:.3f}')
-        # print(f'second: {(mid_time2 - mid_time1) * 1000:.3f}')
-        # print(f'third: {(mid_time3 - mid_time2) * 1000:.3f}')
-        # print(f'fourth: {(mid_time4 - mid_time3) * 1000:.3f}')
-        # print('----------------------------------------------------------')
+        # Стрелочки для y
+        self.addLine(center_x, 0, center_x - arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
+        self.addLine(center_x, 0, center_x + arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
 
     def draw_function(self, shape):
         for i in range(0, 795, 1):
@@ -145,11 +151,13 @@ class Canvas(QGraphicsScene):
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
 
-    def draw_grid(self):
+    def draw_grid(self, color=(80, 80, 80, 255)):
         # Отрисовка сетки
         self.clear()
-        pen = QPen(QColor(80, 80, 80), 0.5)
+        pen = QPen(QColor(*color), 0.5)
+        thin_pen = QPen(QColor(*color), 0.1)  # Для дополнительных линий между основными
         step = self.grid_step
+        sub_step = step / 5
 
         width = self.sceneRect().width()
         height = self.sceneRect().height()
@@ -161,6 +169,23 @@ class Canvas(QGraphicsScene):
         right_logical = self.to_logical_coords(width, height)[0]
         top_logical = self.to_logical_coords(0, 0)[1]
         bottom_logical = self.to_logical_coords(width, height)[1]
+
+        center_x_scene, center_y_scene = self.to_scene_coords(0, 0)
+        # Определяем позиции по x
+        if center_x_scene > width:
+            label_x_pos = width
+        elif center_x_scene < 0:
+            label_x_pos = 0
+        else:
+            label_x_pos = center_x_scene
+
+        # Определяем позиции по y
+        if center_y_scene > height:
+            label_y_pos = height - 55
+        elif center_y_scene < 0:
+            label_y_pos = 0
+        else:
+            label_y_pos = center_y_scene
 
         def format_label_value(value):
             if math.isclose(value, 0, abs_tol=1e-15):
@@ -175,7 +200,17 @@ class Canvas(QGraphicsScene):
             x_scene, top_scene = self.to_scene_coords(x, top_logical)
             _, bottom_scene = self.to_scene_coords(x, bottom_logical)
             self.addLine(x_scene, top_scene, x_scene, bottom_scene, pen)
-            self.draw_text(format_label_value(x), x_scene, top_scene, size=6, color=(70, 68, 81, 200))
+
+            if self.draw_minor_gridlines:
+                for i in range(1, 5):  # Доп. линии
+                    thin_x_scene, _ = self.to_scene_coords(x + i * sub_step, 0)
+                    self.addLine(thin_x_scene, 0, thin_x_scene, height, thin_pen)
+
+            if not (math.isclose(x, 0, abs_tol=1e-15)):
+                self.draw_text(format_label_value(x), x_scene, label_y_pos, size=6, color=(70, 68, 81, 200),
+                               center_x=True, pos_adj=True)
+            else:
+                self.draw_text(format_label_value(x), x_scene, label_y_pos, size=6, color=(70, 68, 81, 200))
 
             x += step
 
@@ -184,17 +219,43 @@ class Canvas(QGraphicsScene):
             left_scene, y_scene = self.to_scene_coords(left_logical, y)
             right_scene, _ = self.to_scene_coords(right_logical, y)
             self.addLine(left_scene, y_scene, right_scene, y_scene, pen)
-            self.draw_text(format_label_value(y), left_scene, y_scene, size=6, color=(70, 68, 81, 200))
 
+            if self.draw_minor_gridlines:
+                for i in range(1, 5):  # Доп. линии
+                    _, thin_y_scene = self.to_scene_coords(0, y + i * sub_step)
+                    self.addLine(0, thin_y_scene, width, thin_y_scene, thin_pen)
+
+            if not (math.isclose(y, 0, abs_tol=1e-15)):
+                self.draw_text(format_label_value(y), label_x_pos, y_scene, size=6, color=(70, 68, 81, 200),
+                               center_y=True, pos_adj=True)
             y += step
 
-    def draw_text(self, text, pos_x, pos_y, font="Aptos", size=10, color=(0, 0, 0, 255)):
+    def draw_text(self, text, pos_x, pos_y, font="Aptos", size=10, color=(0, 0, 0, 255), center_x=False,
+                  center_y=False, pos_adj=False):
         label = QGraphicsTextItem(str(text))
         font = QFont(font, size)  # Выбираем шрифт для подписей
         label.setFont(font)
         label.setDefaultTextColor(QColor(*color))
-        label.setPos(pos_x, pos_y)  # Позиционирование текста
+
+        rect = label.boundingRect()
+
+        x_bias = rect.width() / 2 if center_x else 0  # Смещение по х, если мы хотим, чтобы оно было в середине
+        y_bias = rect.height() / 2 if center_y else 0  # Аналогично
+        label.setPos(pos_x - x_bias, pos_y - y_bias)  # Позиционирование текста
+        rect = label.boundingRect()
+
+        # Корректировка позиции, если текст выходит за правую или нижнюю границу
+        if pos_adj:
+            scene_width = self.sceneRect().width()
+            scene_height = self.sceneRect().height()
+            if label.x() + rect.width() > scene_width:
+                # Корректируем, если текст выходит за правую границу
+                label.setPos(scene_width - 1.5 * rect.width(), label.y())
+            if label.y() + rect.height() >= scene_height:
+                label.setPos(scene_height, pos_y - rect.height())  # Корректируем, если текст выходит за нижнюю границу
+
         self.addItem(label)
+        return label
 
     def draw_circle(self, shape):
         scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
@@ -216,7 +277,6 @@ class Canvas(QGraphicsScene):
         self.addItem(ellipse)
         self.draw_text(shape.name, *self.to_scene_coords(shape.x, shape.y))
 
-    # @timeit
     def draw_segment(self, shape):
         # Отрисовка линий
         scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
@@ -266,3 +326,37 @@ class Canvas(QGraphicsScene):
             line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
+
+    def add_arrow_head(self, shape):
+        # Рисует стрелочку для вектора
+        scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
+        scene_x2, scene_y2 = self.to_scene_coords(shape.point_2.x, shape.point_2.y)
+
+        # Рассчитываем направления стрелки
+        dx = scene_x2 - scene_x1
+        dy = scene_y2 - scene_y1
+        angle = math.atan2(dy, dx)
+
+        arrow_length = 17  # Длина стрелки
+        angle_bisector = math.pi / 12  # Угол
+
+        # Создаем путь для стрелки
+        arrow_path = QPainterPath()
+        arrow_tip = QPointF(scene_x2, scene_y2)
+        arrow_path.moveTo(arrow_tip.x(), arrow_tip.y())
+
+        # Вычисляем точки для "крыльев"
+        left_wing = arrow_tip - QPointF(arrow_length * math.cos(angle + angle_bisector),
+                                        arrow_length * math.sin(angle + angle_bisector))
+        right_wing = arrow_tip - QPointF(arrow_length * math.cos(angle - angle_bisector),
+                                         arrow_length * math.sin(angle - angle_bisector))
+
+        # Рисуем "крылья"
+        arrow_path.lineTo(left_wing)
+        arrow_path.lineTo(right_wing)
+        arrow_path.closeSubpath()
+
+        arrow_item = QGraphicsPathItem(arrow_path)
+        arrow_item.setPen(QPen(QColor(*shape.color), shape.width))
+        arrow_item.setBrush(QColor(*shape.color[:-1], 255))  # Заливка стрелки
+        self.addItem(arrow_item)

@@ -12,7 +12,7 @@ class CustomGraphicsView(QGraphicsView):
         super().__init__(scene, parent)
         self.max_zoom_factor = 1e+16
         self.min_zoom_factor = 1e-11
-        self.zoom_multiplier = 1.08  # Если установить меньше ~1.08, то сетка в самом близком приближении становиться очень мелкой
+        self.zoom_multiplier = 1.05
 
         self.startMove = False
         self.current_tool = 'Move'  # Текущий инструмент
@@ -357,9 +357,11 @@ class CustomGraphicsView(QGraphicsView):
         step = 10
         # Перемещение, зум, переключение инструментов
         if event.key() == Qt.Key_Equal:
-            self.scene().set_zoom_factor(self.scene().zoom_factor * 1.1)
+            if self.scene().zoom_factor * self.zoom_multiplier <= self.max_zoom_factor:
+                self.scene().set_zoom_factor(self.scene().zoom_factor * self.zoom_multiplier)
         if event.key() == Qt.Key_Minus:
-            self.scene().set_zoom_factor(self.scene().zoom_factor / 1.1)
+            if self.scene().zoom_factor / self.zoom_multiplier >= self.min_zoom_factor:
+                self.scene().set_zoom_factor(self.scene().zoom_factor / self.zoom_multiplier)
         if event.key() == Qt.Key_W:
             self.scene().base_point[1] += step
         elif event.key() == Qt.Key_S:
