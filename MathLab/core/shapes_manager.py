@@ -39,6 +39,12 @@ class ShapesManager:
             for shapes in self.temp_shapes.values():
                 shapes.clear()
 
+    def add_selected_point(self, point):
+        self.selected_points.append(point)
+
+    def clear_selected_points(self):
+        self.selected_points = []
+
     def find_closest_point(self, x, y, radius=SEARCH_RADIUS):
         # Поиск ближайшей точки в заданном радиусе
         closest_point = None
@@ -86,12 +92,6 @@ class ShapesManager:
         b = array_points[1]
         dist = ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5
         return dist
-
-    def add_selected_point(self, point):
-        self.selected_points.append(point)
-
-    def clear_selected_points(self):
-        self.selected_points = []
 
 # TODO: Перемести add_selected_point и clear_selected_points после clear_temp_shapes.
 # Хочу, чтобы у нас была некоторая логика в порядке функций (когда я меняю порядок, то функции записываются на меня)
