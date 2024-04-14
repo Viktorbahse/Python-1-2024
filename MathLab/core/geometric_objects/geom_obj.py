@@ -62,9 +62,8 @@ class Point(Shape):
     def distance(self, other_point):
         return self.point.distance(other_point.point)
 
-    def contains_point(self, x, y, check_radius=5):
-        distance = math.sqrt((self.point.x - x) ** 2 + (self.point.y - y) ** 2)
-        return distance <= check_radius
+    def distance_to_point(self, x, y):
+        return math.sqrt((self.point.x - x) ** 2 + (self.point.y - y) ** 2)
 
 
 class Segment(Shape):
@@ -91,7 +90,10 @@ class Segment(Shape):
         if len(self.points) == 2:
             self.point_1 = self.points[0]
             self.point_2 = self.points[1]
-            self.segment = sp.Line(self.point_1.point, self.point_2.point)
+            self.segment = sp.Segment(self.point_1.point, self.point_2.point)
+
+    def distance_to_segment(self, x, y):
+        return self.segment.distance(sp.Point(x, y))
 
 
 class Line(Shape):
@@ -118,11 +120,14 @@ class Line(Shape):
         if len(self.points) == 2:
             self.point_1 = self.points[0]
             self.point_2 = self.points[1]
-            self.segment = sp.Line(self.point_1.point, self.point_2.point)
+            self.line = sp.Line(self.point_1.point, self.point_2.point)
 
     def add_to_owner(self, owner):
         self.owner.append(owner)
         self.set_color(owner.line_color)
+
+    def distance_to_line(self, x, y):
+        return self.line.distance(sp.Point(x, y))
 
 
 class Ray(Shape):
@@ -149,8 +154,11 @@ class Ray(Shape):
         if len(self.points) == 2:
             self.point_1 = self.points[0]
             self.point_2 = self.points[1]
-            self.segment = sp.Line(self.point_1.point, self.point_2.point)
+            self.ray = sp.Ray(self.point_1.point, self.point_2.point)
 
     def add_to_owner(self, owner):
         self.owner.append(owner)
         self.set_color(owner.line_color)
+
+    def distance_to_ray(self, x, y):
+        return self.ray.distance(sp.Point(x, y))

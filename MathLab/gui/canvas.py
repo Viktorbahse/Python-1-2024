@@ -250,15 +250,15 @@ class Canvas(QGraphicsScene):
             self.addItem(line)
 
     def draw_lines(self, shape):
-        scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
-        scene_x, scene_y = self.to_scene_coords(shape.point_2.x, shape.point_2.y)
+        scene_x1, scene_y1 = self.to_scene_coords(shape.line.p1.x, shape.line.p1.y)
+        scene_x, scene_y = self.to_scene_coords(shape.line.p2.x, shape.line.p2.y)
         if scene_x1 == scene_x:
             line = QGraphicsLineItem(scene_x1, 0, scene_x, self.sceneRect().height())
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
         else:
-            slope = (shape.point_2.y - shape.point_1.y) / (shape.point_2.x - shape.point_1.x)
-            intercept = shape.point_2.y - slope * shape.point_2.x
+            slope = shape.line.slope
+            intercept = shape.line.p2.y - slope * shape.line.p2.x
             x1, y1 = self.to_logical_coords(0, 0)  # координаты верхнего левого угла
             x2, y2 = self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())
             scene_x1, scene_y1 = self.to_scene_coords(x1, slope * (x1) + intercept)

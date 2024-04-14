@@ -18,6 +18,7 @@ class CustomGraphicsView(QGraphicsView):
         self.current_tool = 'Move'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
         self.temp_point = None  # Временная точка для начала сегмента.
+        self.temp_line = None
         self.grid_gravity_mode = True
 
         # Связывает название инструмента для рисования с методом, который будет вызван при нажатии на мышку при этом инструменте
@@ -28,6 +29,8 @@ class CustomGraphicsView(QGraphicsView):
             'Line': self.handle_line_creation,
             'Ray': self.handle_ray_creation,
             'Circle': self.handle_circle_creation,
+            'Parallel_Line': self.handle_parallel_line_creation,
+            'Perpendicular_Line': self.handle_perpendicular_line_creation
         }
 
         self.setRenderHint(QPainter.Antialiasing)  # Включение сглаживания
@@ -38,7 +41,9 @@ class CustomGraphicsView(QGraphicsView):
         temp_color = (37, 109, 133, 200)
         temp_shape = None
 
-        if self.temp_point is not None:
+        if self.temp_line is not None and self.current_tool in ['Parallel_Line', 'Perpendicular_Line']:
+            self.draw_temp_parallel_line(sp.Point(logical_pos[0], logical_pos[1]))
+        elif self.temp_point is not None:
             if self.current_tool == 'Segment':
                 temp_shape = Segment([self.temp_point, Point(logical_pos[0], logical_pos[1])], color=temp_color)
             elif self.current_tool == 'Line':
@@ -54,6 +59,13 @@ class CustomGraphicsView(QGraphicsView):
             self.scene().shapes_manager.clear_temp_shapes(type(temp_shape))
             self.scene().shapes_manager.add_temp_shape(temp_shape)
 
+    def draw_temp_parallel_line(self, point, color=(37, 109, 133, 200)):
+        # Добавляет временную линию в shapes_manager для отрисовки. Принимает точки класса Point.
+        self.scene().shapes_manager.clear_temp_shapes()
+        line = Line()
+        line.line = self.temp_line.parallel_line(point)
+        self.scene().shapes_manager.add_temp_shape(line)
+
     def handle_move_canvas(self, scene_pos):
         self.startMove = True
         self.startMovePoint = scene_pos
@@ -66,6 +78,77 @@ class CustomGraphicsView(QGraphicsView):
             if logical_pos is not None:
                 point = Point(logical_pos[0], logical_pos[1])
             self.scene().shapes_manager.add_shape(point)
+
+    def handle_perpendicular_line_creation(self, logical_pos, closest_point, closest_line):
+        if self.temp_line is None and self.temp_point is None:
+            self.current_line = Line()  # Создаем пустую линию.
+            if closest_line is not None:
+                self.temp_line = closest_line.perpendicular_line(sp.Point(logical_pos[0], logical_pos[1]))
+            else:
+                if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
+                    closest_point.add_to_owner(owner=self.current_line)
+                    self.temp_point = closest_point
+                else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
+                    self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                    self.handle_point_creation(point=self.temp_point)
+                self.current_line.add_point(self.temp_point)
+        elif self.temp_line is not None and self.temp_point is None:
+            if closest_point:
+                closest_point.add_to_owner(owner=self.current_line)
+                final_point = closest_point
+            else:
+                final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                self.handle_point_creation(point=final_point)
+            self.current_line.add_point(final_point)
+            self.current_line.line = self.temp_line.parallel_line(sp.Point(final_point.x, final_point.y))
+            self.scene().shapes_manager.clear_temp_shapes()
+            self.scene().shapes_manager.add_shape(self.current_line)
+            self.temp_point = None
+            self.temp_line = None
+        elif self.temp_line is None and self.temp_point is not None:
+            if closest_line is not None:
+                self.temp_line = closest_line
+                self.current_line.line = self.temp_line.perpendicular_line(
+                    sp.Point(self.temp_point.x, self.temp_point.y))
+                self.scene().shapes_manager.clear_temp_shapes()
+                self.scene().shapes_manager.add_shape(self.current_line)
+                self.temp_point = None
+                self.temp_line = None
+
+    def handle_parallel_line_creation(self, logical_pos, closest_point, closest_line):
+        if self.temp_line is None and self.temp_point is None:
+            self.current_line = Line()  # Создаем пустую линию.
+            if closest_line is not None:
+                self.temp_line = closest_line
+            else:
+                if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
+                    closest_point.add_to_owner(owner=self.current_line)
+                    self.temp_point = closest_point
+                else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
+                    self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                    self.handle_point_creation(point=self.temp_point)
+                self.current_line.add_point(self.temp_point)
+        elif self.temp_line is not None and self.temp_point is None:
+            if closest_point:
+                closest_point.add_to_owner(owner=self.current_line)
+                final_point = closest_point
+            else:
+                final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                self.handle_point_creation(point=final_point)
+            self.current_line.add_point(final_point)
+            self.current_line.line = self.temp_line.parallel_line(sp.Point(final_point.x, final_point.y))
+            self.scene().shapes_manager.clear_temp_shapes()
+            self.scene().shapes_manager.add_shape(self.current_line)
+            self.temp_point = None
+            self.temp_line = None
+        elif self.temp_line is None and self.temp_point is not None:
+            if closest_line is not None:
+                self.temp_line = closest_line
+                self.current_line.line = self.temp_line.parallel_line(sp.Point(self.temp_point.x, self.temp_point.y))
+                self.scene().shapes_manager.clear_temp_shapes()
+                self.scene().shapes_manager.add_shape(self.current_line)
+                self.temp_point = None
+                self.temp_line = None
 
     def handle_line_creation(self, logical_pos, closest_point):
         if self.temp_point is None:  # Выбираем начальную точку линии.
@@ -225,8 +308,6 @@ class CustomGraphicsView(QGraphicsView):
         super().mousePressEvent(event)
         scene_pos = self.mapToScene(event.pos())
         logical_pos = self.scene().to_logical_coords(scene_pos.x(), scene_pos.y())
-        closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
-                                                                       10 / self.scene().zoom_factor)  # Ближайшие точки
         if self.grid_gravity_mode:
             gravity_coordinates = (round(logical_pos[0] / self.scene().grid_step) * self.scene().grid_step,
                                    round(logical_pos[1] / self.scene().grid_step) * self.scene().grid_step)
@@ -234,10 +315,17 @@ class CustomGraphicsView(QGraphicsView):
                                                      Point(logical_pos[0],
                                                            logical_pos[1])]) < self.scene().grid_step / 4:
                 logical_pos = gravity_coordinates
-        if self.current_tool in self.drawing_tools:
+        closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
+                                                                       10 / self.scene().zoom_factor)  # Ближайшие точки
+        closest_line = self.scene().shapes_manager.find_closest_line(logical_pos[0], logical_pos[1],
+                                                                     10 / self.scene().zoom_factor)  # Ближайшая линия
+        if self.current_tool in ['Point', 'Segment', 'Polygon', 'Line', 'Ray', 'Circle']:
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
         else:
-            if self.current_tool == 'Distance':
+            if self.current_tool in ['Parallel_Line', 'Perpendicular_Line']:
+                self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point,
+                                                      closest_line=closest_line)
+            elif self.current_tool == 'Distance':
                 self.handle_distance_tool(closest_point=closest_point)
             elif self.current_tool == 'Move':
                 self.handle_move_canvas(scene_pos=scene_pos)
@@ -269,11 +357,9 @@ class CustomGraphicsView(QGraphicsView):
         step = 10
         # Перемещение, зум, переключение инструментов
         if event.key() == Qt.Key_Equal:
-            if self.scene().zoom_factor * self.zoom_multiplier <= self.max_zoom_factor:
-                self.scene().set_zoom_factor(self.scene().zoom_factor * self.zoom_multiplier)
+            self.scene().set_zoom_factor(self.scene().zoom_factor * 1.1)
         if event.key() == Qt.Key_Minus:
-            if self.scene().zoom_factor / self.zoom_multiplier >= self.min_zoom_factor:
-                self.scene().set_zoom_factor(self.scene().zoom_factor / self.zoom_multiplier)
+            self.scene().set_zoom_factor(self.scene().zoom_factor / 1.1)
         if event.key() == Qt.Key_W:
             self.scene().base_point[1] += step
         elif event.key() == Qt.Key_S:
@@ -296,6 +382,10 @@ class CustomGraphicsView(QGraphicsView):
             self.current_tool = 'Segment'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Y:
             self.current_tool = 'Polygon'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_P:
+            self.current_tool = 'Parallel_Line'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_L:
+            self.current_tool = 'Perpendicular_Line'
 
         self.scene().update_scene()
         super().keyPressEvent(event)

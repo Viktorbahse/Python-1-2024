@@ -1,6 +1,7 @@
 from core.geometric_objects.geom_obj import *
 from core.exception.exception import CustomException
 import sympy as sp
+from sympy.calculus.util import singularities
 
 
 class Circle(Shape):
@@ -36,6 +37,7 @@ class Circle(Shape):
 
 class Polygon(Shape):
     def __init__(self, points=None, color=(255, 200, 0, 255)):
+        self.finished = False
         super().__init__(color)
         if points is None:
             self.points = []
@@ -48,11 +50,25 @@ class Polygon(Shape):
     def add_point(self, point):
         self.points.append(point)
 
+    def closest_side(self, x, y):
+        p1 = sp.Point(self.points[len(self.points) - 1].x, self.points[len(self.points) - 1].y)
+        p2 = sp.Point(self.points[0].x, self.points[0].y)
+        side = sp.Segment(p1, p2)
+        for i in range(1, len(self.points)):
+            p1 = p2
+            p2 = sp.Point(self.points[i].x, self.points[i].y)
+            temp_side = sp.Segment(p1, p2)
+            if side.distance(sp.Point(x, y)) > temp_side.distance(sp.Point(x, y)):
+                side = temp_side
+        return side
+
 
 class Function(Shape):
-    def __init__(self, latex_string, color=(255, 0, 0, 255), width=1.5):
-        self.expr = sp.sympify(latex_string)
+    def __init__(self, color=(255, 0, 0, 255), width=1.5):
         self.width = width
+        x = sp.symbols('x')
+        self.f = sp.exp(x)
+        self.points_of_discontinuity = singularities(self.f, x)
         super().__init__(color)
 
     def evaluate(self, x_value):
