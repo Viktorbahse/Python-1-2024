@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QDockWidget, QVBoxLayout, QWidget, QToolButton, QActionGroup, QAction, QSizePolicy, \
-    QLineEdit
+from PyQt5.QtWidgets import QDockWidget, QHBoxLayout, QVBoxLayout, QWidget, QToolButton, QActionGroup, QAction, QSizePolicy, \
+    QLineEdit, QPushButton
 from PyQt5.QtCore import Qt
 
 
@@ -10,16 +10,20 @@ class DockTools(QDockWidget):
         self.setFeatures(QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetMovable)  # Убирает кнопку закрытия
         self.setMinimumWidth(200)
 
-        self.edFunc = QLineEdit(self)
-        self.edFunc.setMinimumHeight(30)
-
         self.grpMode = QActionGroup(self)
 
         self.wgt = QWidget(self)
         self.lay = QVBoxLayout(self.wgt)
         self.lay.setContentsMargins(0, 0, 0, 0)
         self.lay.setSpacing(0)
-        self.lay.addWidget(self.edFunc)
+
+        self.btnAddEdFunc = QPushButton("Add Function", self)
+        self.lay.addWidget(self.btnAddEdFunc)
+
+        self.layEdFuncs = QVBoxLayout(self.wgt)
+        self.layEdFuncs.setContentsMargins(0, 0, 0, 0)
+        self.layEdFuncs.setSpacing(0)
+        self.lay.addLayout(self.layEdFuncs)
 
         self.tools = [
             {"name": "Move", "tooltip": "Set mode move", "statusTip": "Set mode Move"},
@@ -37,6 +41,21 @@ class DockTools(QDockWidget):
 
         self.lay.addStretch()
         self.setWidget(self.wgt)
+
+    def addEdFunc(self):
+        ed = QLineEdit(self)
+        ed.setMinimumHeight(30)
+        hLay = QHBoxLayout()
+        hLay.setContentsMargins(0, 0, 0, 0)
+        hLay.setSpacing(0)
+        hLay.addWidget(ed)
+
+        btn = QToolButton()
+        btn.setText("x")
+        hLay.addWidget(btn)
+
+        self.layEdFuncs.addLayout(hLay)
+        return {"ed": ed, "btn": btn}
 
     def add_tool(self, tool_info):
         action = QAction(tool_info["name"], self)
