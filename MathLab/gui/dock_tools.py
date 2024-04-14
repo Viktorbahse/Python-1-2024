@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QDockWidget, QVBoxLayout, QWidget, QToolButton, QActionGroup, QAction, QSizePolicy, QLineEdit
+from PyQt5.QtWidgets import QDockWidget, QVBoxLayout, QWidget, QToolButton, QActionGroup, QAction, QSizePolicy, \
+    QLineEdit
 from PyQt5.QtCore import Qt
 
 

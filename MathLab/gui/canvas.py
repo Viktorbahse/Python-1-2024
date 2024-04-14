@@ -11,7 +11,7 @@ import time
 class Canvas(QGraphicsScene):
     def __init__(self, width, height, parent=None, zoom_factor=50.0):
         super().__init__(parent)
-        self.setSceneRect(0, 0, width - 15, height - 15)
+        self.setSceneRect(0, 0, width - 2, height - 2)
 
         self.shapes_manager = ShapesManager()
         self.zoom_factor = zoom_factor
@@ -126,16 +126,14 @@ class Canvas(QGraphicsScene):
         x2, y2 = self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height() / 2 + self.base_point[1])
         mid_time3 = time.perf_counter()
 
-
         self.draw_segment(Segment([Point(x1, y1), Point(x2, y2)], color))
         mid_time4 = time.perf_counter()
 
-        #print(f'first: {(mid_time1 - start_time) * 1000:.3f}')
-        #print(f'second: {(mid_time2 - mid_time1) * 1000:.3f}')
-        #print(f'third: {(mid_time3 - mid_time2) * 1000:.3f}')
-        #print(f'fourth: {(mid_time4 - mid_time3) * 1000:.3f}')
-        #print('----------------------------------------------------------')
-
+        # print(f'first: {(mid_time1 - start_time) * 1000:.3f}')
+        # print(f'second: {(mid_time2 - mid_time1) * 1000:.3f}')
+        # print(f'third: {(mid_time3 - mid_time2) * 1000:.3f}')
+        # print(f'fourth: {(mid_time4 - mid_time3) * 1000:.3f}')
+        # print('----------------------------------------------------------')
 
     def draw_function(self, shape):
         for i in range(0, 795, 1):

@@ -230,7 +230,9 @@ class CustomGraphicsView(QGraphicsView):
         if self.grid_gravity_mode:
             gravity_coordinates = (round(logical_pos[0] / self.scene().grid_step) * self.scene().grid_step,
                                    round(logical_pos[1] / self.scene().grid_step) * self.scene().grid_step)
-            if self.scene().shapes_manager.distance([Point(gravity_coordinates[0], gravity_coordinates[1]), Point(logical_pos[0], logical_pos[1])]) < self.scene().grid_step / 4:
+            if self.scene().shapes_manager.distance([Point(gravity_coordinates[0], gravity_coordinates[1]),
+                                                     Point(logical_pos[0],
+                                                           logical_pos[1])]) < self.scene().grid_step / 4:
                 logical_pos = gravity_coordinates
         if self.current_tool in self.drawing_tools:
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)

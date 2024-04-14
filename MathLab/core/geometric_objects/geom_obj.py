@@ -10,18 +10,21 @@ class Shape:
         if color is not None:
             self.color = color
 
+
 class Inf:
     def __init__(self, x, y, message):
         self.x = x
         self.y = y
         self.message = message
 
+
 class Point(Shape):
     count = 0
+
     def __init__(self, x, y, color=(71, 181, 255, 255), owner=None):
         super().__init__(color=color)
         self.point = sp.Point(x, y)
-        self.name = chr(Point.count % 26+65)
+        self.name = chr(Point.count % 26 + 65)
         if Point.count > 25:
             self.name += str(Point.count // 26)
         # Мне все-таки нужны self.x, self.y. Именно их я беру для отрисовки
@@ -31,14 +34,16 @@ class Point(Shape):
         self.owner = owner if owner is not None else []  # Определяем список
         for shape in self.owner:
             self.set_color(shape.point_color)
-        Point.count+=1
+        Point.count += 1
 
     def __del__(self):
         self.previous_name()
+
     def previous_name(self):
-        Point.count-=1
+        Point.count -= 1
+
     def next(self):
-        Point.count+=1
+        Point.count += 1
 
     def add_to_owner(self, owner):
         self.owner.append(owner)
@@ -76,7 +81,7 @@ class Segment(Shape):
             self.add_point(points[1])
 
         self.width = width
-        self.point_color = color  #(255, 220, 51, 255)
+        self.point_color = color  # (255, 220, 51, 255)
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.point_color)
@@ -134,7 +139,7 @@ class Ray(Shape):
             self.add_point(points[1])
 
         self.width = width
-        self.point_color = color  #(127, 0, 255, 255)
+        self.point_color = color  # (127, 0, 255, 255)
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.point_color)

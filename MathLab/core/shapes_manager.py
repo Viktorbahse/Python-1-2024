@@ -2,7 +2,6 @@ from sympy import symbols, lambdify
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 
-
 SEARCH_RADIUS = 5
 
 
@@ -14,7 +13,7 @@ class ShapesManager:
         self.temp_shapes = {Segment: [], Line: [], Ray: [], Circle: []}
 
         self.selected_points = []
-        
+
     def add_shape(self, shape):
         self.shapes[type(shape)].append(shape)
 
@@ -59,7 +58,6 @@ class ShapesManager:
 
     def clear_selected_points(self):
         self.selected_points = []
-
 
 # TODO: Перемести add_selected_point и clear_selected_points после clear_temp_shapes.
 # Хочу, чтобы у нас была некоторая логика в порядке функций (когда я меняю порядок, то функции записываются на меня)

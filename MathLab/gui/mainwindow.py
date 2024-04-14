@@ -7,9 +7,10 @@ from gui.custom_graphics_view import CustomGraphicsView
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
 
+default_size = [1200, 800]
+
 
 class MainWindow(QMainWindow):
-    i=0
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MathLab")
@@ -20,7 +21,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         new_size = event.size()  # получаем новый размер окна
-        self.scene.setSceneRect(0, 0, new_size.width() - self.dockTools.width()-2, new_size.height() - 2)
+        self.scene.setSceneRect(0, 0, new_size.width() - self.dockTools.width() - 2, new_size.height() - 2)
         self.view.setFixedSize(new_size.width() - self.dockTools.width(), new_size.height())
         self.scene.update_scene()
 
@@ -30,7 +31,7 @@ class MainWindow(QMainWindow):
 
         self.layout = QVBoxLayout()
         self.central_widget.setLayout(self.layout)
-        self.scene = Canvas(self.width()-200, self.height())
+        self.scene = Canvas(self.width() - 200, self.height())
 
         self.view = CustomGraphicsView(self.scene)
         self.view.setFixedSize(1000, 800)
@@ -43,6 +44,7 @@ class MainWindow(QMainWindow):
         self.dockTools.set_active_tool("Move")
         self.dockTools.edFunc.textChanged.connect(self.testEdFunc)
         self.dockTools.connect_actions(self.tool_selected)
+
     def initMenu(self):
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('Файл')

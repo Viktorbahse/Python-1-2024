@@ -50,7 +50,7 @@ class Polygon(Shape):
 
 
 class Function(Shape):
-    def __init__(self, latex_string, color=(255, 0, 0, 255),width=1.5):
+    def __init__(self, latex_string, color=(255, 0, 0, 255), width=1.5):
         self.expr = sp.sympify(latex_string)
         self.width = width
         super().__init__(color)
