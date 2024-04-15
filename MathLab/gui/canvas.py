@@ -9,7 +9,7 @@ import time
 
 
 class Canvas(QGraphicsScene):
-    def __init__(self, width, height, parent=None, zoom_factor=60.0):
+    def __init__(self, width, height, parent=None, zoom_factor=65.0):
         super().__init__(parent)
         self.setSceneRect(0, 0, width, height)
 
@@ -41,8 +41,22 @@ class Canvas(QGraphicsScene):
         scene_y = center_y - logical_y * self.zoom_factor
         return scene_x, scene_y
 
-    def set_zoom_factor(self, factor):
+    def set_zoom_factor(self, factor, cursor_scene_pos=None):
+        #  Место, где находится курсор, остается неподвижным. Если курсор вне холста, то делает приближение к центру
+        if cursor_scene_pos is None:
+            cursor_scene_pos = QPointF(self.sceneRect().width() / 2, self.sceneRect().height() / 2)
+        old_logical_coords = self.to_logical_coords(cursor_scene_pos.x(), cursor_scene_pos.y())
         self.zoom_factor = factor
+        new_logical_coords = self.to_logical_coords(cursor_scene_pos.x(), cursor_scene_pos.y())
+
+        delta_x = old_logical_coords[0] - new_logical_coords[0]
+        delta_y = new_logical_coords[1] - old_logical_coords[1]
+
+        delta_scene_coords = self.to_scene_coords(delta_x, delta_y)
+        center = self.to_scene_coords(0, 0)
+
+        self.base_point[0] -= (delta_scene_coords[0] - center[0])
+        self.base_point[1] += (delta_scene_coords[1] - center[1])
         self.grid_step_setting()
 
     def grid_step_setting(self):  # настройка шага сетки
