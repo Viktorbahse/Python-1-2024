@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QGraphicsView, QShortcut
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
+from PyQt5.QtGui import QKeySequence, QCursor
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
@@ -355,13 +355,20 @@ class CustomGraphicsView(QGraphicsView):
 
     def keyPressEvent(self, event):
         step = 10
+
+        # Получаем координаты курсора (сценические)
+        cursor_pos = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
+        # Проверяем, находится ли курсор на нашем холсте
+        if not self.sceneRect().contains(cursor_pos):
+            cursor_pos = None  # Если нет, то приближаться будем не к точке, а к центру
+
         # Перемещение, зум, переключение инструментов
         if event.key() == Qt.Key_Equal:
             if self.scene().zoom_factor * self.zoom_multiplier <= self.max_zoom_factor:
-                self.scene().set_zoom_factor(self.scene().zoom_factor * self.zoom_multiplier)
+                self.scene().set_zoom_factor(self.scene().zoom_factor * self.zoom_multiplier, cursor_pos)
         if event.key() == Qt.Key_Minus:
             if self.scene().zoom_factor / self.zoom_multiplier >= self.min_zoom_factor:
-                self.scene().set_zoom_factor(self.scene().zoom_factor / self.zoom_multiplier)
+                self.scene().set_zoom_factor(self.scene().zoom_factor / self.zoom_multiplier, cursor_pos)
         if event.key() == Qt.Key_W:
             self.scene().base_point[1] += step
         elif event.key() == Qt.Key_S:
