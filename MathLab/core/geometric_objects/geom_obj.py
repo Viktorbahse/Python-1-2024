@@ -17,7 +17,6 @@ class Shape(ABC):
 
     def add_dependent_object(self, owner):
         self.dependent_objects.append(owner)
-        self.set_color(owner.line_color)
 
     @abstractmethod
     def set_name(self, new_name):
@@ -45,8 +44,8 @@ class Point(Shape):
         # Мне все-таки нужны self.x, self.y. Именно их я беру для отрисовки
         self.radius = 5
         self.dependent_objects = owner if owner is not None else []  # Определяем список
-        for shape in self.dependent_objects:
-            self.set_color(shape.point_color)
+        # for shape in self.dependent_objects:
+        #     self.set_color(shape.point_color)
         Point.count += 1
 
     def __del__(self):
@@ -57,16 +56,6 @@ class Point(Shape):
 
     def next(self):
         Point.count += 1
-
-    def add_dependent_object(self, owner):
-        self.dependent_objects.append(owner)
-        if len(self.dependent_objects) == 1:
-            self.set_color(self.dependent_objects[0].point_color)
-        else:
-            color = [0, 0, 0, 0]
-            for i in range(len(color)):
-                color[i] += (owner.point_color[i] + self.color[i]) // 2
-            self.set_color(color)
 
     def add_point(self, point):
         pass

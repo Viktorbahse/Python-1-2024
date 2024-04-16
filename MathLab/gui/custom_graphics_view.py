@@ -5,6 +5,18 @@ from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
+import sympy as sp
+import time
+
+
+def bisector(a, b, c):
+    ba = a - b
+    bc = c - b
+    ba_unit = ba / sp.sqrt(ba.dot(ba))
+    bc_unit = bc / sp.sqrt(bc.dot(bc))
+    bisector_unit = (ba_unit + bc_unit) / 2
+    bisector_point = b + 1 * bisector_unit
+    return sp.Line(sp.Point(float(b.x), float(b.y)), sp.Point(float(bisector_point.x), float(bisector_point.y)))
 
 
 class CustomGraphicsView(QGraphicsView):
@@ -18,6 +30,7 @@ class CustomGraphicsView(QGraphicsView):
         self.current_tool = 'Move'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
         self.temp_point = None  # Временная точка для начала сегмента.
+        self.temp_point1 = None
         self.temp_line = None
         self.grid_gravity_mode = True
 
@@ -30,7 +43,10 @@ class CustomGraphicsView(QGraphicsView):
             'Ray': self.handle_ray_creation,
             'Circle': self.handle_circle_creation,
             'Parallel_Line': self.handle_parallel_line_creation,
-            'Perpendicular_Line': self.handle_perpendicular_line_creation
+            'Perpendicular_Line': self.handle_perpendicular_line_creation,
+            'Midpoint': self.handle_midpoint_creation,
+            'Perpendicular_Bisector': self.handle_perpendicular_bisector_creation,
+            'Angle_Bisector': self.handle_angle_bisector_creation
         }
 
         self.setRenderHint(QPainter.Antialiasing)  # Включение сглаживания
@@ -44,7 +60,16 @@ class CustomGraphicsView(QGraphicsView):
         if self.temp_line is not None and self.current_tool in ['Parallel_Line', 'Perpendicular_Line']:
             self.draw_temp_parallel_line(sp.Point(logical_pos[0], logical_pos[1]))
         elif self.temp_point is not None and self.temp_point.distance_to_shape(logical_pos[0], logical_pos[1]) != 0:
-            if self.current_tool == 'Segment':
+            if self.current_tool == 'Perpendicular_Bisector':
+                temp_shape = Line()
+                temp_shape.entity = (
+                    sp.Line(self.temp_point.entity, sp.Point(logical_pos[0], logical_pos[1]))).perpendicular_line(
+                    self.temp_point.entity.midpoint(sp.Point(logical_pos[0], logical_pos[1])))
+            elif self.current_tool== 'Angle_Bisector' and self.temp_point1 is not None:
+                pass
+                #temp_shape = Line()
+                #temp_shape.entity = bisector(self.temp_point.entity, self.temp_point1.entity, sp.Point(logical_pos[0], logical_pos[1]))
+            elif self.current_tool == 'Segment':
                 temp_shape = Segment([self.temp_point, Point(logical_pos[0], logical_pos[1])], color=temp_color)
             elif self.current_tool == 'Line':
                 temp_shape = Line([self.temp_point, Point(logical_pos[0], logical_pos[1])], color=temp_color)
@@ -78,6 +103,65 @@ class CustomGraphicsView(QGraphicsView):
             if logical_pos is not None:
                 point = Point(logical_pos[0], logical_pos[1])
             self.scene().shapes_manager.add_shape(point)
+
+    def handle_midpoint_creation(self, logical_pos=None, closest_point=False):
+        if self.temp_point is None:  # Выбираем начальную точку линии.
+            if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
+                self.temp_point = closest_point
+            else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
+                self.temp_point = Point(logical_pos[0], logical_pos[1])
+                self.handle_point_creation(point=self.temp_point)
+        else:
+            if closest_point:
+                final_point = closest_point
+            else:
+                self.temp_point.previous_name()
+                final_point = Point(logical_pos[0], logical_pos[1])
+                self.temp_point.next()
+                self.handle_point_creation(point=final_point)
+
+            if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
+                point = self.temp_point.entity.midpoint(final_point.entity)
+                self.scene().shapes_manager.add_shape(
+                    Point(point.x, point.y, [105, 105, 105, 255], owner=[self.temp_point, final_point]))
+                self.temp_point = None
+
+    def handle_perpendicular_bisector_creation(self, logical_pos, closest_point):
+        if closest_point is not None:
+            if self.temp_point is None:
+                self.current_line = Line()
+                closest_point.add_dependent_object(owner=self.current_line)
+                self.temp_point = closest_point
+            else:
+                closest_point.add_dependent_object(owner=self.current_line)
+                final_point = closest_point
+                if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
+                    self.scene().shapes_manager.clear_temp_shapes(Line)
+                    self.current_line.entity = (sp.Line(self.temp_point.entity, final_point.entity)).perpendicular_line(
+                        self.temp_point.entity.midpoint(final_point.entity))
+                    self.scene().shapes_manager.add_shape(self.current_line)
+                    self.temp_point = None
+
+    def handle_angle_bisector_creation(self, logical_pos, closest_point):
+        if closest_point is not None:
+            if self.temp_point is None:
+                self.current_line = Line()
+                closest_point.add_dependent_object(owner=self.current_line)
+                self.temp_point = closest_point
+            elif self.temp_point1 is None and self.temp_point.distance_to_shape(closest_point.entity.x,
+                                                                                closest_point.entity.y) != 0:
+                closest_point.add_dependent_object(owner=self.current_line)
+                self.temp_point1 = closest_point
+            elif self.temp_point.distance_to_shape(closest_point.entity.x,
+                                                   closest_point.entity.y) != 0 and self.temp_point1.distance_to_shape(
+                closest_point.entity.x, closest_point.entity.y) != 0:
+                closest_point.add_dependent_object(owner=self.current_line)
+                final_point = closest_point
+                self.scene().shapes_manager.clear_temp_shapes(Line)
+                self.current_line.entity = bisector(self.temp_point.entity, self.temp_point1.entity, final_point.entity)
+                self.scene().shapes_manager.add_shape(self.current_line)
+                self.temp_point = None
+                self.temp_point1 = None
 
     def handle_perpendicular_line_creation(self, logical_pos, closest_point, closest_line):
         if self.temp_line is None and self.temp_point is None:
@@ -329,7 +413,8 @@ class CustomGraphicsView(QGraphicsView):
         closest_line = self.scene().shapes_manager.find_closest_line(logical_pos[0], logical_pos[1],
                                                                      10 / self.scene().zoom_factor)  # Ближайшая линия
 
-        if self.current_tool in ['Point', 'Segment', 'Polygon', 'Line', 'Ray', 'Circle']:
+        if self.current_tool in ['Point', 'Segment', 'Polygon', 'Line', 'Ray', 'Circle', 'Midpoint',
+                                 'Perpendicular_Bisector', 'Angle_Bisector']:
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
         else:
             if self.current_tool in ['Parallel_Line', 'Perpendicular_Line']:
@@ -339,7 +424,6 @@ class CustomGraphicsView(QGraphicsView):
                 self.handle_distance_tool(closest_point=closest_point)
             elif self.current_tool == 'Move':
                 self.handle_move_canvas(scene_pos=scene_pos)
-
         self.scene().update_scene()
 
     def mouseMoveEvent(self, event):
@@ -405,6 +489,12 @@ class CustomGraphicsView(QGraphicsView):
             self.current_tool = 'Parallel_Line'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_L:
             self.current_tool = 'Perpendicular_Line'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_M:
+            self.current_tool = 'Midpoint'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_K:
+            self.current_tool = 'Perpendicular_Bisector'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_J:
+            self.current_tool = 'Angle_Bisector'
 
         self.scene().update_scene()
         super().keyPressEvent(event)
