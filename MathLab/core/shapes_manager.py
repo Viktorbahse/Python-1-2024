@@ -50,8 +50,8 @@ class ShapesManager:
         closest_point = None
         distance = radius + 1
         for shape in self.shapes[Point]:
-            if shape.distance_to_point(x, y) < distance:
-                distance = shape.distance_to_point(x, y)
+            if shape.distance_to_shape(x, y) < distance:
+                distance = shape.distance_to_shape(x, y)
                 closest_point = shape
         if distance < radius:
             return closest_point
@@ -61,20 +61,20 @@ class ShapesManager:
         closest_shape = None
         distance = radius + 1
         for shape in self.shapes[Line]:
-            if len(shape.points) == 2 or shape.line is not None:
-                if shape.distance_to_line(x, y) < distance:
-                    closest_shape = shape.line
-                    distance = shape.distance_to_line(x, y)
+            if len(shape.points) == 2 or shape.entity is not None:
+                if shape.distance_to_shape(x, y) < distance:
+                    closest_shape = shape.entity
+                    distance = shape.distance_to_shape(x, y)
         for shape in self.shapes[Ray]:
             if len(shape.points) == 2:
-                if shape.distance_to_ray(x, y) < distance:
-                    closest_shape = shape.ray
-                    distance = shape.distance_to_ray(x, y)
+                if shape.distance_to_shape(x, y) < distance:
+                    closest_shape = shape.entity
+                    distance = shape.distance_to_shape(x, y)
         for shape in self.shapes[Segment]:
             if len(shape.points) == 2:
-                if shape.distance_to_segment(x, y) < distance:
-                    closest_shape = shape.segment
-                    distance = shape.distance_to_segment(x, y)
+                if shape.distance_to_shape(x, y) < distance:
+                    closest_shape = shape.entity
+                    distance = shape.distance_to_shape(x, y)
         for shape in self.shapes[Polygon]:
             if shape.finished:
                 closest_temp_side = shape.closest_side(x, y)
@@ -90,7 +90,7 @@ class ShapesManager:
     def distance(array_points: []):
         a = array_points[0]
         b = array_points[1]
-        dist = ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5
+        dist = ((a.entity.x - b.entity.x) ** 2 + (a.entity.y - b.entity.y) ** 2) ** 0.5
         return dist
 
 # TODO: Перемести add_selected_point и clear_selected_points после clear_temp_shapes.

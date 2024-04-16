@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QGraphicsPathItem
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, \
+    QGraphicsPathItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
 from PyQt5.QtCore import Qt, QPointF, QLineF
 from core.shapes_manager import ShapesManager
@@ -272,8 +273,8 @@ class Canvas(QGraphicsScene):
         return label
 
     def draw_circle(self, shape):
-        scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
-        scene_x, scene_y = self.to_scene_coords(shape.point_2.x, shape.point_2.y)
+        scene_x1, scene_y1 = self.to_scene_coords(shape.points[0].entity.x, shape.points[0].entity.y)
+        scene_x, scene_y = self.to_scene_coords(shape.points[1].entity.x, shape.points[1].entity.y)
         rad = (((scene_x1 - scene_x) ** 2 + (scene_y1 - scene_y) ** 2) ** 0.5)
 
         # координаты левого верхнего угла, ширина и высота
@@ -285,23 +286,23 @@ class Canvas(QGraphicsScene):
     def draw_point(self, shape):
         # Отрисовка точек
         radius = shape.radius
-        scene_x, scene_y = self.to_scene_coords(shape.x, shape.y)
+        scene_x, scene_y = self.to_scene_coords(shape.entity.x, shape.entity.y)
         ellipse = QGraphicsEllipseItem(scene_x - radius, scene_y - radius, 2 * radius, 2 * radius)
         ellipse.setBrush(QBrush(QColor(*shape.color)))
         self.addItem(ellipse)
-        self.draw_text(shape.name, *self.to_scene_coords(shape.x, shape.y))
+        self.draw_text(shape.name, *self.to_scene_coords(shape.entity.x, shape.entity.y))
 
     def draw_segment(self, shape):
         # Отрисовка линий
-        scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
-        scene_x2, scene_y2 = self.to_scene_coords(shape.point_2.x, shape.point_2.y)
+        scene_x1, scene_y1 = self.to_scene_coords(shape.points[0].entity.x, shape.points[0].entity.y)
+        scene_x2, scene_y2 = self.to_scene_coords(shape.points[1].entity.x, shape.points[1].entity.y)
         segment = QGraphicsLineItem(scene_x1, scene_y1, scene_x2, scene_y2)
         segment.setPen(QPen(QColor(*shape.color), shape.width))
         self.addItem(segment)
 
     def draw_ray(self, shape):
-        scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)
-        scene_x, scene_y = self.to_scene_coords(shape.point_2.x, shape.point_2.y)
+        scene_x1, scene_y1 = self.to_scene_coords(shape.points[0].entity.x, shape.points[0].entity.y)
+        scene_x, scene_y = self.to_scene_coords(shape.points[1].entity.x, shape.points[1].entity.y)
         if scene_x1 == scene_x:
             if scene_y > scene_y1:
                 line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, self.sceneRect().height())
@@ -310,8 +311,8 @@ class Canvas(QGraphicsScene):
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
         else:
-            slope = (shape.point_2.y - shape.point_1.y) / (shape.point_2.x - shape.point_1.x)
-            intercept = shape.point_2.y - slope * shape.point_2.x
+            slope = shape.entity.slope
+            intercept = shape.entity.p2.y - slope * shape.entity.p2.x
             x1, y1 = self.to_logical_coords(0, 0)  # координаты верхнего левого угла
             x2, y2 = self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())
             if scene_x > scene_x1:
@@ -324,15 +325,15 @@ class Canvas(QGraphicsScene):
             self.addItem(line)
 
     def draw_lines(self, shape):
-        scene_x1, scene_y1 = self.to_scene_coords(shape.line.p1.x, shape.line.p1.y)
-        scene_x, scene_y = self.to_scene_coords(shape.line.p2.x, shape.line.p2.y)
+        scene_x1, scene_y1 = self.to_scene_coords(shape.entity.p1.x, shape.entity.p1.y)
+        scene_x, scene_y = self.to_scene_coords(shape.entity.p2.x, shape.entity.p2.y)
         if scene_x1 == scene_x:
             line = QGraphicsLineItem(scene_x1, 0, scene_x, self.sceneRect().height())
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
         else:
-            slope = shape.line.slope
-            intercept = shape.line.p2.y - slope * shape.line.p2.x
+            slope = shape.entity.slope
+            intercept = shape.entity.p2.y - slope * shape.entity.p2.x
             x1, y1 = self.to_logical_coords(0, 0)  # координаты верхнего левого угла
             x2, y2 = self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())
             scene_x1, scene_y1 = self.to_scene_coords(x1, slope * (x1) + intercept)
