@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QGraphicsPathItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
-from PyQt5.QtCore import Qt, QPointF, QLineF, QThread, pyqtSignal, QTimer, QObject
+from PyQt5.QtCore import Qt, QPointF, QLineF, pyqtSignal, QTimer, QObject
 from core.shapes_manager import ShapesManager
 from core.geometric_objects.figure import *
 from tests.test_distances import *
@@ -27,6 +27,7 @@ class Canvas(QGraphicsScene):
                                         self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())[0])
         self.lower_width = self.canvas_logical_width / 2
         self.upper_width = self.canvas_logical_width * 2
+        self.function_paths = {}  # Словарь для хранения путей функций
 
         self.update_scene()  # Полное обновление сцены
 
@@ -79,6 +80,7 @@ class Canvas(QGraphicsScene):
             self.upper_width *= 2
 
         self.canvas_logical_width = current_width
+        #TODO: доделать с pretty_step_increase и pretty_step_decrease
 
     def pretty_step_increase(self, step):
         # Определяет следующее большее "красивое" значение
@@ -102,9 +104,13 @@ class Canvas(QGraphicsScene):
                 return pretty_step * magnitude
         return pretty_steps[-1]  # Для случаев, когда шаг меньше минимального "красивого" значения
 
+    def clear_scene(self):
+        self.clear()
+        self.function_paths.clear()  # Очищает функции
+
     @timeit
     def update_scene(self):
-        self.clear()  # Очищаем
+        self.clear_scene()  # Очищаем
         self.draw_grid()  # Рисуем сетку
         self.draw_coordinate_axes()  # Рисуем оси координат
         self.draw_temp_shapes()  # Рисуем временные фигуры
@@ -122,6 +128,8 @@ class Canvas(QGraphicsScene):
             self.draw_circle(shape)
         for shape in self.shapes_manager.shapes[Point]:
             self.draw_point(shape)
+        for shape in self.shapes_manager.shapes[Function]:
+            self.draw_function(shape)
         for text in self.shapes_manager.shapes[Inf]:
             self.draw_text(text.message, *self.to_scene_coords(text.x, text.y), center_x=True, center_y=True)
 
@@ -158,16 +166,6 @@ class Canvas(QGraphicsScene):
         # Стрелочки для y
         self.addLine(center_x, 0, center_x - arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
         self.addLine(center_x, 0, center_x + arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
-
-    def draw_function(self, shape):
-        for i in range(0, 795, 1):
-            x1, y1 = self.to_logical_coords(i, 0)
-            x2, y2 = self.to_logical_coords(i + 1, 0)
-            scene_x1, scene_y1 = self.to_scene_coords(x1, float(shape.evaluate(x1)))
-            scene_x, scene_y = self.to_scene_coords(x2, float(shape.evaluate(x2)))
-            line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
-            line.setPen(QPen(QColor(*shape.color), shape.width))
-            self.addItem(line)
 
     def draw_grid(self, color=(80, 80, 80, 255)):
         # Отрисовка сетки
@@ -274,6 +272,46 @@ class Canvas(QGraphicsScene):
 
         self.addItem(label)
         return label
+
+    def draw_function(self, func):
+        # Проверяем, есть ли уже готовый путь для функции, нужно для оптимизации рисования
+        if func.id not in self.function_paths:
+            # Если нет, то создаём
+            path_item = QGraphicsPathItem()
+            self.addItem(path_item)
+            self.function_paths[func.id] = path_item
+        else:
+            # Если уже существует, то просто получаем его
+            path_item = self.function_paths[func.id]
+
+        pen = QPen(QColor(*func.color))
+        pen.setWidthF(func.width)
+        path_item.setPen(pen)
+
+        path = QPainterPath()
+        start = True
+
+        # Определяем границы рисования
+        x_start, _ = self.to_logical_coords(0, 0)
+        x_end, _ = self.to_logical_coords(self.sceneRect().width(), 0)
+
+        # Равномерно распределяет точки на интервале
+        x_values = np.linspace(x_start, x_end, num=200)  # Думаю 400 макс
+        y_values = func.evaluate(x_values)  # Считаем y
+
+        for x, y in zip(x_values, y_values):  # zip создает [(x[0], y[0]), (x[1], y[1]), ...]
+            # Если бесконечное или близко к точке разрыва (0.1)
+            if np.isfinite(y) and all(abs(x - d) > 0.1 for d in func.points_of_discontinuity):
+                x_scene, y_scene = self.to_scene_coords(x, y)
+                if start:
+                    path.moveTo(x_scene, y_scene)
+                    start = False
+                else:
+                    path.lineTo(x_scene, y_scene)
+            else:
+                start = True  # Начинаем новый путь после разрыва
+
+        path_item.setPath(path)
 
     def draw_circle(self, shape):
         scene_x1, scene_y1 = self.to_scene_coords(shape.point_1.x, shape.point_1.y)

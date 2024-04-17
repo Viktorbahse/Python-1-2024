@@ -8,7 +8,8 @@ SEARCH_RADIUS = 5
 class ShapesManager:
     def __init__(self):
         # Словарик для хранения фигур
-        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: []}
+        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: [], Function: []}
+        self.shapes[Function].append(Function('x^2'))  # Пример добавления
         # Словарик для временных фигур
         self.temp_shapes = {Segment: [], Line: [], Ray: [], Circle: []}
 
@@ -92,6 +93,3 @@ class ShapesManager:
         b = array_points[1]
         dist = ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5
         return dist
-
-# TODO: Перемести add_selected_point и clear_selected_points после clear_temp_shapes.
-# Хочу, чтобы у нас была некоторая логика в порядке функций (когда я меняю порядок, то функции записываются на меня)
