@@ -1,7 +1,9 @@
 from core.geometric_objects.geom_obj import *
 from core.exception.exception import CustomException
-import sympy as sp
-from sympy.calculus.util import singularities
+from sympy import symbols, singularities, S, lambdify, sympify
+from functools import lru_cache
+import numpy as np
+import uuid
 
 
 class Circle(Shape):
@@ -64,13 +66,30 @@ class Polygon(Shape):
 
 
 class Function(Shape):
-    def __init__(self, color=(255, 0, 0, 255), width=1.5):
-        self.width = width
-        x = sp.symbols('x')
-        self.f = sp.exp(x)
-        self.points_of_discontinuity = singularities(self.f, x)
+    def __init__(self, expr, color=(255, 0, 0, 255), width=1.5):
         super().__init__(color)
+        self.width = width
 
-    def evaluate(self, x_value):
-        y_value = self.expr.subs('x', x_value)
-        return y_value
+        self.x = symbols('x')
+        self.expr = sympify(expr) if isinstance(expr, str) else expr  # Преобр. строку в мат выражение
+        self.func = lambdify(self.x, self.expr, 'numpy')  # Создаем функцию для быстрых вычислений с numpy
+        self.points_of_discontinuity = self.find_discontinuities()
+
+        self.id = uuid.uuid4()
+
+    @lru_cache(maxsize=None)
+    def find_discontinuities(self):
+        # Ищем точки разрыва и кэширует их, запоминает
+        discontinuities = singularities(self.expr, self.x, domain=S.Reals)
+        return [float(point.evalf()) for point in discontinuities if point.is_real]
+
+    def evaluate(self, x_values):
+        try:
+            result = self.func(x_values)
+            # Смотрит, является ли массивом np
+            if isinstance(result, np.ndarray):
+                return result.astype(np.float64)
+            else:
+                return np.full(x_values.shape, np.nan, dtype=np.float64)
+        except Exception as e:
+            return np.full(x_values.shape, np.nan, dtype=np.float64)
