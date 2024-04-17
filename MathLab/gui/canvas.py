@@ -1,10 +1,13 @@
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, \
     QGraphicsPathItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
-from PyQt5.QtCore import Qt, QPointF, QLineF
+from PyQt5.QtCore import Qt, QPointF, QLineF, QThread, pyqtSignal, QTimer, QObject
 from core.shapes_manager import ShapesManager
 from core.geometric_objects.figure import *
 from tests.test_distances import *
+from tests.timing import *
+import numpy as np
+import sympy as sp
 import math
 import time
 
@@ -100,6 +103,7 @@ class Canvas(QGraphicsScene):
                 return pretty_step * magnitude
         return pretty_steps[-1]  # Для случаев, когда шаг меньше минимального "красивого" значения
 
+    @timeit
     def update_scene(self):
         self.clear()  # Очищаем
         self.draw_grid()  # Рисуем сетку
