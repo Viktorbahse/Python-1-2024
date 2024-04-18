@@ -54,12 +54,12 @@ class Function(Shape):
     def __init__(self, color=(255, 0, 0, 255), width=1.5):
         self.width = width
         x = sp.symbols('x')
-        self.f = sp.exp(x)
+        self.f = x**2
         self.points_of_discontinuity = singularities(self.f, x)
         super().__init__(color)
 
     def evaluate(self, x_value):
-        y_value = self.expr.subs('x', x_value)
+        y_value = self.f.subs('x', x_value)
         return y_value
 
     def set_name(self, new_name):
