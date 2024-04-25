@@ -18,14 +18,7 @@ class ShapesManager:
 
     def remove_shape(self, shape):
         if shape in self.shapes[type(shape)]:
-            if shape == Point:  # Метод удаления работает только для Point
-                self.shapes[type(shape)].remove(shape)
-
-    # def find_shape(self, x, y, radius=SEARCH_RADIUS):
-    #     for shape in self.shapes[Point]:
-    #         if shape.contains_point(x, y, radius):
-    #             return shape
-    #     return
+            self.shapes[type(shape)].remove(shape)
 
     def add_temp_shape(self, shape):
         shape_type = type(shape)
@@ -85,12 +78,23 @@ class ShapesManager:
             return closest_shape
         return None
 
+    def find_closest_shape(self, x, y, radius=SEARCH_RADIUS):
+        # Находит ближайший объект и расстояние до него
+        closest_shape = None
+        min_distance = float('inf')
+
+        for shape_list in self.shapes.values():
+            for shape in shape_list:
+                distance = shape.distance_to_shape(x, y)  # Этот метод должен вычислять расстояние от точки до объекта
+                if distance < radius and distance < min_distance:
+                    min_distance = distance
+                    closest_shape = shape
+
+        return closest_shape, min_distance
+
     @staticmethod
     def distance(array_points: []):
         a = array_points[0]
         b = array_points[1]
         dist = ((a.entity.x - b.entity.x) ** 2 + (a.entity.y - b.entity.y) ** 2) ** 0.5
         return dist
-
-# TODO: Перемести add_selected_point и clear_selected_points после clear_temp_shapes.
-# Хочу, чтобы у нас была некоторая логика в порядке функций (когда я меняю порядок, то функции записываются на меня)
