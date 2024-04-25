@@ -23,6 +23,7 @@ class DockTools(QDockWidget):
 
         self.tools = [
             {"name": "Move", "tooltip": "Set mode move", "statusTip": "Set mode Move"},
+            {"name": "Eraser", "tooltip": "Set mode eraser", "statusTip": "Set mode Eraser"},
             {"name": "Point", "tooltip": "Set mode Point", "statusTip": "Set mode Point"},
             {"name": "Segment", "tooltip": "Set mode Segment", "statusTip": "Set mode Segment"},
             {"name": "Line", "tooltip": "Set mode Line", "statusTip": "Set mode Line"},
