@@ -1,5 +1,4 @@
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, \
-    QGraphicsPathItem
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QGraphicsPathItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
 from PyQt5.QtCore import Qt, QPointF, QLineF, QThread, pyqtSignal, QTimer, QObject
 from core.shapes_manager import ShapesManager
@@ -28,6 +27,9 @@ class Canvas(QGraphicsScene):
                                         self.to_logical_coords(self.sceneRect().width(), self.sceneRect().height())[0])
         self.lower_width = self.canvas_logical_width / 2
         self.upper_width = self.canvas_logical_width * 2
+
+        self.grid_path = QPainterPath()  # Наша сетка, представленная одним путем (для оптимизации)
+        self.thin_grid_path = QPainterPath()  # Мелкая сетка, представленная одним путем
 
         self.update_scene()  # Полное обновление сцены
 
@@ -80,6 +82,7 @@ class Canvas(QGraphicsScene):
             self.upper_width *= 2
 
         self.canvas_logical_width = current_width
+        # TODO: (Winter) доделать красивые значения
 
     def pretty_step_increase(self, step):
         # Определяет следующее большее "красивое" значение
@@ -103,9 +106,16 @@ class Canvas(QGraphicsScene):
                 return pretty_step * magnitude
         return pretty_steps[-1]  # Для случаев, когда шаг меньше минимального "красивого" значения
 
+    #@timeit
+    def clear_scene(self):
+        # Очищает все элементы сцены
+        self.clear()
+        self.grid_path.clear()  # Сброс основного пути сетки
+        self.thin_grid_path.clear()  # Сброс пути мелкой сетки
+
     @timeit
     def update_scene(self):
-        self.clear()  # Очищаем
+        self.clear_scene()  # Очищаем
         self.draw_grid()  # Рисуем сетку
         self.draw_coordinate_axes()  # Рисуем оси координат
         self.draw_temp_shapes()  # Рисуем временные фигуры
@@ -175,7 +185,6 @@ class Canvas(QGraphicsScene):
 
     def draw_grid(self, color=(80, 80, 80, 255)):
         # Отрисовка сетки
-        self.clear()
         pen = QPen(QColor(*color), 0.5)
         thin_pen = QPen(QColor(*color), 0.1)  # Для дополнительных линий между основными
         step = self.grid_step
@@ -221,12 +230,16 @@ class Canvas(QGraphicsScene):
         while x <= right_logical:
             x_scene, top_scene = self.to_scene_coords(x, top_logical)
             _, bottom_scene = self.to_scene_coords(x, bottom_logical)
-            self.addLine(x_scene, top_scene, x_scene, bottom_scene, pen)
+
+            self.grid_path.moveTo(x_scene, top_scene)
+            self.grid_path.lineTo(x_scene, bottom_scene)
 
             if self.draw_minor_gridlines:
                 for i in range(1, 5):  # Доп. линии
                     thin_x_scene, _ = self.to_scene_coords(x + i * sub_step, 0)
-                    self.addLine(thin_x_scene, 0, thin_x_scene, height, thin_pen)
+
+                    self.thin_grid_path.moveTo(thin_x_scene, 0)
+                    self.thin_grid_path.lineTo(thin_x_scene, height)
 
             if not (math.isclose(x, 0, abs_tol=1e-15)):
                 self.draw_text(format_label_value(x), x_scene, label_y_pos, size=6, color=(70, 68, 81, 200),
@@ -240,17 +253,25 @@ class Canvas(QGraphicsScene):
         while y <= top_logical:
             left_scene, y_scene = self.to_scene_coords(left_logical, y)
             right_scene, _ = self.to_scene_coords(right_logical, y)
-            self.addLine(left_scene, y_scene, right_scene, y_scene, pen)
+
+            self.grid_path.moveTo(left_scene, y_scene)
+            self.grid_path.lineTo(right_scene, y_scene)
 
             if self.draw_minor_gridlines:
                 for i in range(1, 5):  # Доп. линии
                     _, thin_y_scene = self.to_scene_coords(0, y + i * sub_step)
-                    self.addLine(0, thin_y_scene, width, thin_y_scene, thin_pen)
+
+                    self.thin_grid_path.moveTo(0, thin_y_scene)
+                    self.thin_grid_path.lineTo(width, thin_y_scene)
 
             if not (math.isclose(y, 0, abs_tol=1e-15)):
                 self.draw_text(format_label_value(y), label_x_pos, y_scene, size=6, color=(70, 68, 81, 200),
                                center_y=True, pos_adj=True)
             y += step
+
+        self.addPath(self.grid_path, pen)
+        if self.draw_minor_gridlines:
+            self.addPath(self.thin_grid_path, thin_pen)
 
     def draw_text(self, text, pos_x, pos_y, font="Aptos", size=10, color=(0, 0, 0, 255), center_x=False,
                   center_y=False, pos_adj=False):
@@ -348,7 +369,6 @@ class Canvas(QGraphicsScene):
             line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
             line.setPen(QPen(QColor(*shape.color), shape.width))
             self.addItem(line)
-
 
     def add_arrow_head(self, shape):
         # Рисует стрелочку для вектора
