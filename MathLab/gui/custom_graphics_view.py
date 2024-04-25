@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QGraphicsView, QShortcut
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence, QCursor
+from PyQt5.QtGui import QKeySequence, QCursor, QPixmap
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
@@ -89,6 +89,7 @@ class CustomGraphicsView(QGraphicsView):
         self.scene().shapes_manager.clear_temp_shapes()
         line = Line()
         line.entity = self.temp_line.parallel_line(point)
+        line.set_color(color)  # Чтобы цвет временной линии был такой же, как у остальных
         self.scene().shapes_manager.add_temp_shape(line)
 
     def handle_move_canvas(self, scene_pos):
@@ -130,10 +131,10 @@ class CustomGraphicsView(QGraphicsView):
         if closest_point is not None:
             if self.temp_point is None:
                 self.current_line = Line()
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 self.temp_point = closest_point
             else:
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 final_point = closest_point
                 if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
                     self.scene().shapes_manager.clear_temp_shapes(Line)
@@ -146,16 +147,16 @@ class CustomGraphicsView(QGraphicsView):
         if closest_point is not None:
             if self.temp_point is None:
                 self.current_line = Line()
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 self.temp_point = closest_point
             elif self.temp_point1 is None and self.temp_point.distance_to_shape(closest_point.entity.x,
                                                                                 closest_point.entity.y) != 0:
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 self.temp_point1 = closest_point
             elif self.temp_point.distance_to_shape(closest_point.entity.x,
                                                    closest_point.entity.y) != 0 and self.temp_point1.distance_to_shape(
                 closest_point.entity.x, closest_point.entity.y) != 0:
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 final_point = closest_point
                 self.scene().shapes_manager.clear_temp_shapes(Line)
                 self.current_line.entity = bisector(self.temp_point.entity, self.temp_point1.entity, final_point.entity)
@@ -170,7 +171,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.temp_line = closest_line.perpendicular_line(sp.Point(logical_pos[0], logical_pos[1]))
             else:
                 if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
-                    closest_point.add_dependent_object(owner=self.current_line)
+                    closest_point.add_owner(owner=self.current_line)
                     self.temp_point = closest_point
                 else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
                     self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
@@ -178,7 +179,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_line.add_point(self.temp_point)
         elif self.temp_line is not None and self.temp_point is None:
             if closest_point:
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 final_point = closest_point
             else:
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
@@ -207,7 +208,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.temp_line = closest_line
             else:
                 if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
-                    closest_point.add_dependent_object(owner=self.current_line)
+                    closest_point.add_owner(owner=self.current_line)
                     self.temp_point = closest_point
                 else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
                     self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
@@ -215,7 +216,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_line.add_point(self.temp_point)
         elif self.temp_line is not None and self.temp_point is None:
             if closest_point:
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 final_point = closest_point
             else:
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
@@ -241,7 +242,7 @@ class CustomGraphicsView(QGraphicsView):
         if self.temp_point is None:  # Выбираем начальную точку линии.
             self.current_line = Line()  # Создаем пустую линию.
             if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 self.temp_point = closest_point
             else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
                 self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
@@ -250,7 +251,7 @@ class CustomGraphicsView(QGraphicsView):
         else:
             # Завершаем рисовать линию и добавляем её в список постоянных фигур (второе нажатие)
             if closest_point:
-                closest_point.add_dependent_object(owner=self.current_line)
+                closest_point.add_owner(owner=self.current_line)
                 final_point = closest_point
             else:
                 self.temp_point.previous_name()
@@ -268,7 +269,7 @@ class CustomGraphicsView(QGraphicsView):
         if self.temp_point is None:  # Выбираем начальную точку луча.
             self.current_ray = Ray()  # Создаем пока пустой луч(без направления).
             if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
-                closest_point.add_dependent_object(owner=self.current_ray)
+                closest_point.add_owner(owner=self.current_ray)
                 self.temp_point = closest_point
             else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
                 self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_ray])
@@ -277,7 +278,7 @@ class CustomGraphicsView(QGraphicsView):
         else:
             # Завершаем рисовать луч и добавляем его в список постоянных фигур (второе нажатие).
             if closest_point:
-                closest_point.add_dependent_object(owner=self.current_ray)
+                closest_point.add_owner(owner=self.current_ray)
                 final_point = closest_point
             else:
                 self.temp_point.previous_name()
@@ -310,7 +311,7 @@ class CustomGraphicsView(QGraphicsView):
         if self.temp_point is None:  # Устанавливаем центр круга.
             self.current_circle = Circle()  # Создаем пока пустой круг.
             if closest_point:  # Если нашли ближайшую точку, используем её как центр.
-                closest_point.add_dependent_object(owner=self.current_circle)
+                closest_point.add_owner(owner=self.current_circle)
                 self.temp_point = closest_point
             else:  # Если не нашлась, выбираем для центра координаты цурсора.
                 self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_circle])
@@ -319,7 +320,7 @@ class CustomGraphicsView(QGraphicsView):
         else:
             # Завершаем рисовать круг и добавляем его в список постоянных фигур (второе нажатие).
             if closest_point:
-                closest_point.add_dependent_object(owner=self.current_circle)
+                closest_point.add_owner(owner=self.current_circle)
                 final_point = closest_point
             else:
                 self.temp_point.previous_name()
@@ -334,11 +335,10 @@ class CustomGraphicsView(QGraphicsView):
 
     def handle_segment_creation(self, logical_pos, closest_point):
         # Обрабатывает создание отрезка
-
         if self.temp_point is None:  # Т.е. это наша первая точка
             self.current_segment = Segment()  # Создаем пока пустой отрезок
             if closest_point:  # Если нашли ближайшую точку, используем её как начало линии
-                closest_point.add_dependent_object(owner=self.current_segment)
+                closest_point.add_owner(owner=self.current_segment)
                 self.temp_point = closest_point
             else:  # Иначе устанавливаем текущую позицию
                 self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_segment])
@@ -347,7 +347,7 @@ class CustomGraphicsView(QGraphicsView):
         else:
             # Завершаем рисовать линию и добавляем её в список постоянных фигур (второе нажатие)
             if closest_point:
-                closest_point.add_dependent_object(owner=self.current_segment)
+                closest_point.add_owner(owner=self.current_segment)
                 final_point = closest_point
             else:
                 self.temp_point.previous_name()
@@ -362,7 +362,6 @@ class CustomGraphicsView(QGraphicsView):
 
     def handle_polygon_creation(self, logical_pos, closest_point):
         # Обрабатывает создание многоугольника
-
         if self.polygon_points is None:  # Т.е. это наша первая точка
             self.current_polygon = Polygon()
             self.polygon_points = []
@@ -371,8 +370,14 @@ class CustomGraphicsView(QGraphicsView):
         if closest_point and self.polygon_points and closest_point == self.polygon_points[0]:
             if len(self.polygon_points) > 1:  # Создаем линию от последней точки к первой
                 last_point = self.polygon_points[-1]
-                self.scene().shapes_manager.add_shape(
-                    Segment([last_point, closest_point], owner=[self.current_polygon]))
+                new_segment = Segment([last_point, closest_point], owner=[self.current_polygon])
+                self.scene().shapes_manager.add_shape(new_segment)
+
+                last_point.add_owner(new_segment)
+                closest_point.add_owner(new_segment)
+
+                self.current_polygon.add_secondary_element(new_segment)
+
                 last_point.next()
             self.scene().shapes_manager.clear_temp_shapes(Segment)
             self.scene().shapes_manager.add_shape(self.current_polygon)
@@ -380,7 +385,7 @@ class CustomGraphicsView(QGraphicsView):
         else:
             # Добавляем новую точку (не первую)
             if closest_point:
-                closest_point.add_dependent_object(self.current_polygon)
+                closest_point.add_owner(self.current_polygon)
                 new_point = closest_point
             else:
                 new_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_polygon])
@@ -388,8 +393,13 @@ class CustomGraphicsView(QGraphicsView):
             if not self.polygon_points or (self.polygon_points and new_point != self.polygon_points[-1]):
                 if self.polygon_points:
                     last_point = self.polygon_points[-1]
-                    self.scene().shapes_manager.add_shape(
-                        Segment([last_point, new_point], owner=[self.current_polygon]))
+                    new_segment = Segment([last_point, new_point], owner=[self.current_polygon])
+                    self.scene().shapes_manager.add_shape(new_segment)
+
+                    last_point.add_owner(new_segment)
+                    new_point.add_owner(new_segment)
+
+                    self.current_polygon.add_secondary_element(new_segment)
                 self.polygon_points.append(new_point)
                 if len(self.polygon_points) == 1:
                     new_point.previous_name()
@@ -397,10 +407,54 @@ class CustomGraphicsView(QGraphicsView):
 
         self.scene().shapes_manager.clear_temp_shapes(Segment)
 
+    def handle_delete(self, shape):
+        # Метод для корректного удаления объектов
+        while len(shape.secondary_elements) != 0:  # Сначала удаляем все второстепенные элементы (не сущ без shape)
+            element = shape.secondary_elements[0]
+            shape.remove_secondary_element(element)
+            self.handle_delete(element)  # Запускаем рекурсию
+
+        for element in shape.primary_elements:  # Основные элементы продолжают жить без shape
+            element.remove_owner(shape)
+
+        if shape.owner:
+            while len(shape.owner) != 0:
+                owner = shape.owner[0]
+
+                # Если наша точка не является основной, то она удаляется без всяких последствий для owner
+                if shape in owner.secondary_elements:
+                    owner.remove_secondary_element(shape)
+                # Иначе - удаляется сам owner
+                else:
+                    owner.remove_primary_element(shape)
+                    self.handle_delete(owner)
+
+        self.scene().shapes_manager.remove_shape(shape)
+
+    def change_cursor(self):
+        # Метод для изменения курсора
+        if self.current_tool == 'Eraser':
+            pixmap = QPixmap(10, 10)
+            pixmap.fill(Qt.transparent)  # Заполняем прозрачным цветом
+            painter = QPainter(pixmap)
+            painter.setPen(Qt.black)
+            painter.drawRect(0, 0, 9, 9)  # Рисуем квадрат
+            painter.end()
+
+            # Создаём курсор из QPixmap
+            cursor = QCursor(pixmap)
+            self.setCursor(cursor)  # Устанавливаем курсор для QGraphicsView
+
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         scene_pos = self.mapToScene(event.pos())
         logical_pos = self.scene().to_logical_coords(scene_pos.x(), scene_pos.y())
+
+        closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
+                                                                       10 / self.scene().zoom_factor)  # Ближайшие точки
+        closest_line = self.scene().shapes_manager.find_closest_line(logical_pos[0], logical_pos[1],
+                                                                     10 / self.scene().zoom_factor)  # Ближайшая линия
+
         if self.grid_gravity_mode:
             gravity_coordinates = (round(logical_pos[0] / self.scene().grid_step) * self.scene().grid_step,
                                    round(logical_pos[1] / self.scene().grid_step) * self.scene().grid_step)
@@ -408,11 +462,6 @@ class CustomGraphicsView(QGraphicsView):
                                                      Point(logical_pos[0],
                                                            logical_pos[1])]) < self.scene().grid_step / 4:
                 logical_pos = gravity_coordinates
-        closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
-                                                                       10 / self.scene().zoom_factor)  # Ближайшие точки
-        closest_line = self.scene().shapes_manager.find_closest_line(logical_pos[0], logical_pos[1],
-                                                                     10 / self.scene().zoom_factor)  # Ближайшая линия
-
         if self.current_tool in ['Point', 'Segment', 'Polygon', 'Line', 'Ray', 'Circle', 'Midpoint',
                                  'Perpendicular_Bisector', 'Angle_Bisector']:
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
@@ -424,7 +473,16 @@ class CustomGraphicsView(QGraphicsView):
                 self.handle_distance_tool(closest_point=closest_point)
             elif self.current_tool == 'Move':
                 self.handle_move_canvas(scene_pos=scene_pos)
+            elif self.current_tool == 'Eraser':
+                self.change_cursor()
+                closest_shape = self.scene().shapes_manager.find_closest_shape(logical_pos[0], logical_pos[1],
+                                                                               10 / self.scene().zoom_factor)
+                if closest_shape[0]:  # Если найдена ближайшая фигура
+                    self.handle_delete(closest_shape[0])
+
         self.scene().update_scene()
+
+        # TODO: (Winter) оптимизировать closest_point и closest_line
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -439,12 +497,20 @@ class CustomGraphicsView(QGraphicsView):
             delta = (scene_pos - self.startMovePoint)
             self.scene().base_point[0] = self.saveBasePointX + delta.x()
             self.scene().base_point[1] = self.saveBasePointY + delta.y()
+        elif self.current_tool == 'Eraser' and event.buttons() == Qt.LeftButton:
+            self.change_cursor()
+            closest_shape = self.scene().shapes_manager.find_closest_shape(logical_pos[0], logical_pos[1],
+                                                                           10 / self.scene().zoom_factor)
+            if closest_shape[0]:  # Если найдена ближайшая фигура
+                self.handle_delete(closest_shape[0])
 
         self.initiate_temp_shape_drawing(logical_pos)
         self.scene().update_scene()
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
+        if event.button() == Qt.LeftButton:
+            self.unsetCursor()  # Ставит обычный курсор после разжатия мыши
         self.startMove = False
 
     def keyPressEvent(self, event):
@@ -495,6 +561,7 @@ class CustomGraphicsView(QGraphicsView):
             self.current_tool = 'Perpendicular_Bisector'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_J:
             self.current_tool = 'Angle_Bisector'
-
+        elif event.key() == Qt.Key_Delete:
+            self.current_tool = 'Eraser'
         self.scene().update_scene()
         super().keyPressEvent(event)
