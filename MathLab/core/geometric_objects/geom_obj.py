@@ -1,4 +1,5 @@
 import sympy as sp
+import re
 from abc import ABC, abstractmethod
 
 
@@ -13,6 +14,17 @@ class Shape(ABC):
         self.primary_elements = []
         # Второстепенные элементы, принадлежащие объекту (без них живет, и они удаляются вместе с объектом)
         self.secondary_elements = []
+
+    def __del__(self):
+        self.color = None
+        self.entity = None
+        self.width = None
+
+        self.owner = None  # Элементы, к которым принадлежит объект (владелец объекта)
+        # Основные элементы, принадлежащие объекту (без них не живет, и основные не удаляются вместе с объектом)
+        self.primary_elements = None
+        # Второстепенные элементы, принадлежащие объекту (без них живет, и они удаляются вместе с объектом)
+        self.secondary_elements = None
 
     def add_point(self, point, is_primary=True):
         # Добавляется точку к объекту
@@ -58,6 +70,9 @@ class Shape(ABC):
             self.secondary_elements.remove(element)
             element.remove_owner(self)
 
+    def distance_to_shape(self, x, y):
+        return self.entity.distance(sp.Point(float(x), float(y)))
+
     def update_color(self):
         # Устанавливает цвет, если есть несколько владельцев, то уст средний
         if len(self.owner) == 0:
@@ -79,11 +94,6 @@ class Shape(ABC):
         if color is not None:
             self.color = color
 
-    def distance_to_shape(self, x, y):
-        return self.entity.distance(sp.Point(float(x), float(y)))
-        # TODO: (Vik76) Будет хорошо, если он будет между remove_secondary_element и update_color
-        #  (там у нас будет блок вычислений)
-
     @abstractmethod
     def set_name(self, new_name):
         pass
@@ -98,36 +108,38 @@ class Inf:
 
 
 class Point(Shape):
-    count = 0
+    used_names = [0] * 26
 
     def __init__(self, x, y, color=(71, 181, 255, 255), owner=None):
         super().__init__(sp.Point(x, y), color=color)
-
-        self.name = chr(Point.count % 26 + 65)
-        if Point.count > 25:
-            self.name += str(Point.count // 26)
-
+        self.name = None
+        self.point_color = color
         self.radius = 5
-        Point.count += 1
         self.owner = owner if owner is not None else []  # Определяем список
         self.update_color()
 
-        # TODO: (Vik76) Имя точки в отдельную функцию надо вынести. Также пересмотри то, как у нас имя считается
-
     def __del__(self):
-        self.previous_name()
-
-    def previous_name(self):
-        Point.count -= 1
-
-    def next(self):
-        Point.count += 1
+        if self.name and re.match(r"^[A-Z][0-9]*$", self.name):
+            self.used_names[ord(self.name[0]) - 65] -= 1
+        if self.name:
+            print(self.name)
 
     def add_point(self, point, is_primary=True):
         pass
 
+    def creating_name(self):
+        minimum = 0
+        for i in range(26):
+            if (self.used_names[minimum] > self.used_names[i]):
+                minimum = i
+        name = chr(65 + minimum)
+        if self.used_names[minimum] > 0:
+            name += str(self.used_names[minimum])
+        self.set_name(name)
+        self.used_names[minimum] += 1
+
     def set_name(self, new_name):
-        pass
+        self.name = new_name
 
 
 class Segment(Shape):
@@ -143,6 +155,10 @@ class Segment(Shape):
         self.point_color = color
         for shape in self.owner:
             self.set_color(shape.point_color)
+
+    def __del__(self):
+        super().__del__()
+        self.points = None
 
     def add_point(self, point, is_primary=True):
         super().add_point(point=point, is_primary=is_primary)
@@ -168,6 +184,10 @@ class Line(Shape):
         for shape in self.owner:
             self.set_color(shape.point_color)
 
+    def __del__(self):
+        super().__del__()
+        self.points = None
+
     def add_point(self, point, is_primary=True):
         super().add_point(point=point, is_primary=is_primary)
         if len(self.points) == 2:
@@ -191,6 +211,10 @@ class Ray(Shape):
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.point_color)
+
+    def __del__(self):
+        super().__del__()
+        self.points = None
 
     def add_point(self, point, is_primary=True):
         super().add_point(point=point, is_primary=is_primary)

@@ -14,11 +14,15 @@ class ShapesManager:
         self.selected_points = []
 
     def add_shape(self, shape):
+        if type(shape) == Point:
+            shape.creating_name()
         self.shapes[type(shape)].append(shape)
 
     def remove_shape(self, shape):
         if shape in self.shapes[type(shape)]:
             self.shapes[type(shape)].remove(shape)
+        if type(shape) != Point:
+            shape.__del__()
 
     def add_temp_shape(self, shape):
         shape_type = type(shape)

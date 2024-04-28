@@ -42,11 +42,11 @@ class CustomGraphicsView(QGraphicsView):
             'Line': self.handle_line_creation,
             'Ray': self.handle_ray_creation,
             'Circle': self.handle_circle_creation,
-            'Parallel_Line': self.handle_parallel_line_creation,
-            'Perpendicular_Line': self.handle_perpendicular_line_creation,
+            'Parallel Line': self.handle_parallel_line_creation,
+            'Perpendicular Line': self.handle_perpendicular_line_creation,
             'Midpoint': self.handle_midpoint_creation,
-            'Perpendicular_Bisector': self.handle_perpendicular_bisector_creation,
-            'Angle_Bisector': self.handle_angle_bisector_creation
+            'Perpendicular Bisector': self.handle_perpendicular_bisector_creation,
+            'Angle Bisector': self.handle_angle_bisector_creation
         }
 
         self.setRenderHint(QPainter.Antialiasing)  # Включение сглаживания
@@ -57,18 +57,18 @@ class CustomGraphicsView(QGraphicsView):
         temp_color = (37, 109, 133, 200)
         temp_shape = None
 
-        if self.temp_line is not None and self.current_tool in ['Parallel_Line', 'Perpendicular_Line']:
+        if self.temp_line is not None and self.current_tool in ['Parallel Line', 'Perpendicular Line']:
             self.draw_temp_parallel_line(sp.Point(logical_pos[0], logical_pos[1]))
         elif self.temp_point is not None and self.temp_point.distance_to_shape(logical_pos[0], logical_pos[1]) != 0:
-            if self.current_tool == 'Perpendicular_Bisector':
+            if self.current_tool == 'Perpendicular Bisector':
                 temp_shape = Line()
                 temp_shape.entity = (
                     sp.Line(self.temp_point.entity, sp.Point(logical_pos[0], logical_pos[1]))).perpendicular_line(
                     self.temp_point.entity.midpoint(sp.Point(logical_pos[0], logical_pos[1])))
-            elif self.current_tool== 'Angle_Bisector' and self.temp_point1 is not None:
+            elif self.current_tool == 'Angle Bisector' and self.temp_point1 is not None:
                 pass
-                #temp_shape = Line()
-                #temp_shape.entity = bisector(self.temp_point.entity, self.temp_point1.entity, sp.Point(logical_pos[0], logical_pos[1]))
+                # temp_shape = Line()
+                # temp_shape.entity = bisector(self.temp_point.entity, self.temp_point1.entity, sp.Point(logical_pos[0], logical_pos[1]))
             elif self.current_tool == 'Segment':
                 temp_shape = Segment([self.temp_point, Point(logical_pos[0], logical_pos[1])], color=temp_color)
             elif self.current_tool == 'Line':
@@ -116,9 +116,7 @@ class CustomGraphicsView(QGraphicsView):
             if closest_point:
                 final_point = closest_point
             else:
-                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1])
-                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
 
             if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
@@ -254,9 +252,7 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_owner(owner=self.current_line)
                 final_point = closest_point
             else:
-                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
-                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
 
             if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
@@ -281,9 +277,7 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_owner(owner=self.current_ray)
                 final_point = closest_point
             else:
-                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_ray])
-                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
             if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
                 self.current_ray.add_point(final_point)
@@ -323,9 +317,7 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_owner(owner=self.current_circle)
                 final_point = closest_point
             else:
-                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_circle])
-                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
             if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
                 self.current_circle.add_point(final_point)
@@ -350,9 +342,7 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_owner(owner=self.current_segment)
                 final_point = closest_point
             else:
-                self.temp_point.previous_name()
                 final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_segment])
-                self.temp_point.next()
                 self.handle_point_creation(point=final_point)
             if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
                 self.current_segment.add_point(final_point)
@@ -378,7 +368,6 @@ class CustomGraphicsView(QGraphicsView):
 
                 self.current_polygon.add_secondary_element(new_segment)
 
-                last_point.next()
             self.scene().shapes_manager.clear_temp_shapes(Segment)
             self.scene().shapes_manager.add_shape(self.current_polygon)
             self.polygon_points = None
@@ -401,8 +390,6 @@ class CustomGraphicsView(QGraphicsView):
 
                     self.current_polygon.add_secondary_element(new_segment)
                 self.polygon_points.append(new_point)
-                if len(self.polygon_points) == 1:
-                    new_point.previous_name()
                 self.current_polygon.add_point(new_point)
 
         self.scene().shapes_manager.clear_temp_shapes(Segment)
@@ -463,10 +450,10 @@ class CustomGraphicsView(QGraphicsView):
                                                            logical_pos[1])]) < self.scene().grid_step / 4:
                 logical_pos = gravity_coordinates
         if self.current_tool in ['Point', 'Segment', 'Polygon', 'Line', 'Ray', 'Circle', 'Midpoint',
-                                 'Perpendicular_Bisector', 'Angle_Bisector']:
+                                 'Perpendicular Bisector', 'Angle Bisector']:
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
         else:
-            if self.current_tool in ['Parallel_Line', 'Perpendicular_Line']:
+            if self.current_tool in ['Parallel Line', 'Perpendicular Line']:
                 self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point,
                                                       closest_line=closest_line)
             elif self.current_tool == 'Distance':
@@ -552,15 +539,15 @@ class CustomGraphicsView(QGraphicsView):
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Y:
             self.current_tool = 'Polygon'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_P:
-            self.current_tool = 'Parallel_Line'
+            self.current_tool = 'Parallel Line'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_L:
-            self.current_tool = 'Perpendicular_Line'
+            self.current_tool = 'Perpendicular Line'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_M:
             self.current_tool = 'Midpoint'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_K:
-            self.current_tool = 'Perpendicular_Bisector'
+            self.current_tool = 'Perpendicular Bisector'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_J:
-            self.current_tool = 'Angle_Bisector'
+            self.current_tool = 'Angle Bisector'
         elif event.key() == Qt.Key_Delete:
             self.current_tool = 'Eraser'
         self.scene().update_scene()

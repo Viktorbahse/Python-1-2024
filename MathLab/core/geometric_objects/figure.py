@@ -19,6 +19,10 @@ class Circle(Shape):
         for shape in self.owner:
             self.set_color(shape.point_color)
 
+    def __del__(self):
+        super().__del__()
+        self.points = None
+
     def add_point(self, point, is_primary=True):
         super().add_point(point, is_primary=is_primary)
         if len(self.points) == 2:
@@ -52,6 +56,10 @@ class Polygon(Shape):
         self.line_color = self.color
         self.owner = owner if owner is not None else []
 
+    def __del__(self):
+        super().__del__()
+        self.points = None
+
     def distance_to_shape(self, x, y):
         point_to_check = sp.Point(x, y)
 
@@ -80,7 +88,7 @@ class Function(Shape):
     def __init__(self, color=(255, 0, 0, 255), width=1.5):
         self.width = width
         x = sp.symbols('x')
-        self.f = x**2
+        self.f = x ** 2
         self.points_of_discontinuity = singularities(self.f, x)
         super().__init__(color)
 
