@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction, QLabel
 from PyQt5.QtCore import Qt
 from gui.custom_graphics_view import CustomGraphicsView
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QAction
 from PyQt5.QtCore import Qt, QSize, QTimer
 from gui.custom_graphics_view import CustomGraphicsView
 from gui.canvas import Canvas
@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dockTools)
 
         self.dockTools.set_active_tool("Move")
-        self.dockTools.edFunc.textChanged.connect(self.testEdFunc)
+        self.dockTools.btnAddEdFunc.clicked.connect(self.onAddEdFunc)
         self.dockTools.connect_actions(self.tool_selected)
 
         if self.display_timing:  # Текст с временем работы функции
@@ -70,8 +70,34 @@ class MainWindow(QMainWindow):
         self.timing_widget.resize(200, 20)
         TIMING_SIGNAL.time_updated.connect(self.timing_widget.setText)
 
-    def testEdFunc(self):
-        print(self.dockTools.edFunc.text())
+    def onAddEdFunc(self):
+        print("onAddEdFunc")
+        # self.edFuncs = {}
+        edAndBtn = self.dockTools.addEdFunc()
+        edAndBtn['ed'].textChanged.connect(self.onTextChangedEdFunc)
+        edAndBtn['btn'].clicked.connect(self.onDelEdFunc)
+
+    def findIndexEdFunc(self, wgt, indexWgt):
+        cnt = self.dockTools.layEdFuncs.count()
+        for i in range(cnt):
+            hlay = self.dockTools.layEdFuncs.itemAt(i)
+            if hlay.itemAt(indexWgt).widget() == wgt:
+                return i
+        return -1
+
+    def onDelEdFunc(self):
+        btn = self.sender()
+        num = self.findIndexEdFunc(btn, 1)
+        print(num, ": ")
+        layItem = self.dockTools.layEdFuncs.itemAt(num)
+        for i in range(layItem.count()):
+            layItem.itemAt(i).widget().deleteLater()
+        self.dockTools.layEdFuncs.removeItem(layItem)
+
+    def onTextChangedEdFunc(self):
+        ed = self.sender()
+        num = self.findIndexEdFunc(ed, 0)
+        print(num, ": ", ed.text())
 
     def tool_selected(self, tool_name):
         self.view.current_tool = tool_name
