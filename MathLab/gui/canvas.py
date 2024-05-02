@@ -99,7 +99,7 @@ class Canvas(QGraphicsScene):
             self.draw_circle(shape)
         for shape in self.shapes_manager.shapes[Point]:
             self.draw_point(shape)
-        for text in self.shapes_manager.shapes[Inf]:
+        for text in self.shapes_manager.shapes[Info]:
             self.draw_text(text.message, *self.to_scene_coords(text.x, text.y))
 
     def draw_temp_shapes(self):

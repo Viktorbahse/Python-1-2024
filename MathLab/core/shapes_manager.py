@@ -1,14 +1,19 @@
 from sympy import symbols, lambdify
+from PyQt5.QtCore import pyqtSignal, QObject
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 
 SEARCH_RADIUS = 5
 
 
+class Communicate(QObject):
+    shapesChanged = pyqtSignal()
+
 class ShapesManager:
     def __init__(self):
+        self.comm = Communicate()
         # Словарик для хранения фигур
-        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: []}
+        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Info: []}
         # Словарик для временных фигур
         self.temp_shapes = {Segment: [], Line: [], Ray: [], Circle: []}
 
@@ -16,11 +21,16 @@ class ShapesManager:
 
     def add_shape(self, shape):
         self.shapes[type(shape)].append(shape)
+        self.comm.shapesChanged.emit()
 
     def remove_shape(self, shape):
+        changes = False
         if shape in self.shapes[type(shape)]:
             if shape == Point:  # Метод удаления работает только для Point
                 self.shapes[type(shape)].remove(shape)
+                changes = True
+        if changes:
+            self.comm.shapesChanged.emit()
 
     def find_shape(self, x, y, radius=SEARCH_RADIUS):
         for shape in self.shapes[Point]:

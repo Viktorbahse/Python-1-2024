@@ -17,8 +17,8 @@ class DockTools(QDockWidget):
         self.lay.setContentsMargins(0, 0, 0, 0)
         self.lay.setSpacing(0)
 
-        self.btnAddEdFunc = QPushButton("Add Function", self)
-        self.lay.addWidget(self.btnAddEdFunc)
+        self.btn_add_ed_func = QPushButton("Add Function", self)
+        self.lay.addWidget(self.btn_add_ed_func)
 
         self.layEdFuncs = QVBoxLayout(self.wgt)
         self.layEdFuncs.setContentsMargins(0, 0, 0, 0)
@@ -42,7 +42,7 @@ class DockTools(QDockWidget):
         self.lay.addStretch()
         self.setWidget(self.wgt)
 
-    def addEdFunc(self):
+    def add_ed_func(self):
         ed = QLineEdit(self)
         ed.setMinimumHeight(30)
         hLay = QHBoxLayout()

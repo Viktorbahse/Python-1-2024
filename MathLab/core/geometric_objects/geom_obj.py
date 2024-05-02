@@ -1,5 +1,6 @@
 import sympy as sp
 import math
+import json
 
 
 class Shape:
@@ -10,8 +11,7 @@ class Shape:
         if color is not None:
             self.color = color
 
-
-class Inf:
+class Info:
     def __init__(self, x, y, message):
         self.x = x
         self.y = y
