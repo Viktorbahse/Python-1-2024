@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         ed = self.sender()
         num = self.findIndexEdFunc(ed, 0)
         self.scene.shapes_manager.functions[num].reset(ed.text())  # Обновляем функцию.
-        self.scene.shapes_manager.resolve_intersections()  # Обновляем точки пересечения функций.
+        # self.scene.shapes_manager.resolve_intersections()  # Обновляем точки пересечения функций.
         print(num, ": ", self.scene.shapes_manager.functions[num].entity)
 
     def tool_selected(self, tool_name):

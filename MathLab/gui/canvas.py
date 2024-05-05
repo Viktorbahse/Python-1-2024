@@ -10,6 +10,7 @@ import math
 import time
 import multiprocessing
 import numpy as np
+import sympy as sp
 import concurrent.futures
 
 
@@ -181,40 +182,39 @@ class Canvas(QGraphicsScene):
         path = QPainterPath()
         x_start, _ = self.to_logical_coords(0, 0)
         x_end, _ = self.to_logical_coords(self.sceneRect().width(), 0)
-        tasks = []  # Массив для хранения задач, которые распределяются по потокам.
-        values = []  # Массив для хранения координат узлов ломаной.
         for func in self.shapes_manager.functions:
             if func.corect:
+                bad_points = list(func.discontinuity_points.intersect(sp.Interval(x_start, x_end)))
                 if func.type in ["line", "const"]:  # Оптимизация для линий.
                     x, y = self.to_scene_coords(x_start, func.evaluate(x_start))
                     path.moveTo(QPointF(x, y))
                     x, y = self.to_scene_coords(x_end, func.evaluate(x_end))
                     path.lineTo(QPointF(x, y))
-                    continue
-                bad_points = [x_start]  # точки разрыва + точки границ эрана
-                for x in func.discontinuity_points:  # Выбираем точки разрыва, которые попадают в область экрана.
-                    if x >= x_end:
-                        break
-                    if x > x_start:
-                        bad_points.append(x)
+                elif len(bad_points) == 0:
+                    x_values = np.linspace(float(x_start), float(x_end), 300)
+                    y_values = func.f(x_values)
+                    x, y = self.to_scene_coords(x_values[0], y_values[0])
+                    path.moveTo(QPointF(x, y))
+                    for i in range(1, len(x_values)):
+                        x, y = self.to_scene_coords(x_values[i], y_values[i])
+                        path.lineTo(QPointF(x, y))
+                else:
+                    bad_points = [x_start] + bad_points + [x_end]
+                    for i in range(len(bad_points) - 1):
+                        if func.is_defined((bad_points[i] + bad_points[i + 1]) / 2):
+                            accuracy = 200
+                            if len(bad_points) > 5:
+                                accuracy = 50
+                            x_values = np.linspace(float(bad_points[i] + (bad_points[i + 1] - bad_points[i]) / 200000),
+                                                   float(bad_points[i + 1] - (
+                                                           bad_points[i + 1] - bad_points[i]) / 200000), accuracy)
+                            y_values = func.f(x_values)
+                            x, y = self.to_scene_coords(x_values[0], y_values[0])
+                            path.moveTo(QPointF(x, y))
+                            for i in range(1, len(x_values)):
+                                x, y = self.to_scene_coords(x_values[i], y_values[i])
+                                path.lineTo(QPointF(x, y))
 
-                bad_points.append(x_end)
-                for i in range(len(bad_points) - 1):  # Создаем задачи для вычисления значений функции на интервалах
-                    if func.is_defined((bad_points[i] + bad_points[i + 1]) / 2):
-                        x_s = bad_points[i] + (bad_points[i + 1] - bad_points[i]) / 10000000
-                        x_e = bad_points[i + 1] - (bad_points[i + 1] - bad_points[i]) / 10000000
-                        val = []
-                        x_values = np.linspace(float(x_s), float(x_e), 500)
-                        y_values = func.f(x_values)
-                        for j in range(len(x_values)):
-                            val.append([x_values[j], y_values[j]])
-                        values.append(val)
-        for val in values:
-            x, y = self.to_scene_coords(val[0][0], val[0][1])
-            path.moveTo(QPointF(x, y))
-            for i in range(len(val)):
-                x, y = self.to_scene_coords(val[i][0], val[i][1])
-                path.lineTo(QPointF(x, y))
         path_item = QGraphicsPathItem()
         path_item.setPath(path)
         path_item.setPen(QPen(Qt.red, 2))
