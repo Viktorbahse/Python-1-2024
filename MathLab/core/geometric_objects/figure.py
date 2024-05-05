@@ -98,6 +98,7 @@ class Function(Shape):
         self.entity = string
         try:
             self.expr = sp.sympify(string) if isinstance(string, str) else string  # Преобр. строку в мат выражение
+            self.f = sp.lambdify(self.x, self.expr, 'numpy')
             self.discontinuity_points = sp.singularities(self.expr, self.x)
             self.corect = True
             self.test_type()

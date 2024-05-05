@@ -9,25 +9,14 @@ from tests.timing import *
 import math
 import time
 import multiprocessing
-
-
-def calculating_values(task):  # Считаем значения функции в точках.
-    x_start = task[0] + (task[1] - task[0]) / 1000000000000  # Делаем отступ от потенциально плохой точки.
-    x_end = task[1] - (task[1] - task[0]) / 10000000000000
-    size = x_end - x_start
-    count = 8
-    values = [[x_start, task[2].evaluate(x_start)]]
-    for i in range(1, count):  # Разбиваем интервал на отрезки.
-        values.append([x_start + size * i / count, task[2].evaluate(x_start + size * i / count)])
-    values.append([x_end, task[2].evaluate(x_end)])
-    return values  # Возвращаем массив пар координат
+import numpy as np
+import concurrent.futures
 
 
 class Canvas(QGraphicsScene):
     def __init__(self, width, height, parent=None, zoom_factor=65.0):
         super().__init__(parent)
         self.setSceneRect(0, 0, width, height)
-        self.pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())  # Устанавлеваемчисло
         self.shapes_manager = ShapesManager()
         self.zoom_factor = zoom_factor
         self.grid_step = 1
@@ -44,10 +33,6 @@ class Canvas(QGraphicsScene):
         self.thin_grid_path = QPainterPath()  # Мелкая сетка, представленная одним путем
 
         self.update_scene()  # Полное обновление сцены
-
-    def __del__(self):
-        self.pool.close()
-        self.pool.join()
 
     def to_logical_coords(self, scene_x, scene_y):
         center_x = self.sceneRect().width() / 2 + self.base_point[0]
@@ -208,18 +193,22 @@ class Canvas(QGraphicsScene):
                     continue
                 bad_points = [x_start]  # точки разрыва + точки границ эрана
                 for x in func.discontinuity_points:  # Выбираем точки разрыва, которые попадают в область экрана.
+                    if x >= x_end:
+                        break
                     if x > x_start:
                         bad_points.append(x)
-                    elif x >= x_end:
-                        break
+
                 bad_points.append(x_end)
                 for i in range(len(bad_points) - 1):  # Создаем задачи для вычисления значений функции на интервалах
                     if func.is_defined((bad_points[i] + bad_points[i + 1]) / 2):
-                        dist = bad_points[i + 1] - bad_points[i]
-                        for t in range(12):
-                            tasks.append([bad_points[i] + dist * t / 12, bad_points[i] + dist * (t + 1) / 12, func,
-                                          x_end - x_start])
-                values = self.pool.map(calculating_values, tasks)  # Считаем значения функции.
+                        x_s = bad_points[i] + (bad_points[i + 1] - bad_points[i]) / 10000000
+                        x_e = bad_points[i + 1] - (bad_points[i + 1] - bad_points[i]) / 10000000
+                        val = []
+                        x_values = np.linspace(float(x_s), float(x_e), 500)
+                        y_values = func.f(x_values)
+                        for j in range(len(x_values)):
+                            val.append([x_values[j], y_values[j]])
+                        values.append(val)
         for val in values:
             x, y = self.to_scene_coords(val[0][0], val[0][1])
             path.moveTo(QPointF(x, y))
