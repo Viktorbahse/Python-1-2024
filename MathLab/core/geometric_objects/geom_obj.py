@@ -121,8 +121,6 @@ class Point(Shape):
     def __del__(self):
         if self.name and re.match(r"^[A-Z][0-9]*$", self.name):
             self.used_names[ord(self.name[0]) - 65] -= 1
-        if self.name:
-            print(self.name)
 
     def add_point(self, point, is_primary=True):
         pass

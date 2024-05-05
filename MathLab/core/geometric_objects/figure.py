@@ -2,6 +2,7 @@ from core.geometric_objects.geom_obj import *
 from core.exception.exception import CustomException
 import sympy as sp
 from sympy.calculus.util import singularities
+import numpy as np
 
 
 class Circle(Shape):
@@ -85,16 +86,64 @@ class Polygon(Shape):
 
 
 class Function(Shape):
-    def __init__(self, color=(255, 0, 0, 255), width=1.5):
-        self.width = width
-        x = sp.symbols('x')
-        self.f = x ** 2
-        self.points_of_discontinuity = singularities(self.f, x)
-        super().__init__(color)
+    def __init__(self, string=""):
+        self.corect = False
+        self.color = (255, 0, 0, 255)
+        self.entity = string
+        self.width = 1.5
+        self.x = sp.symbols('x')
+        self.type = None
 
-    def evaluate(self, x_value):
-        y_value = self.f.subs('x', x_value)
-        return y_value
+    def reset(self, string):
+        self.entity = string
+        try:
+            self.expr = sp.sympify(string) if isinstance(string, str) else string  # Преобр. строку в мат выражение
+            self.discontinuity_points = sp.singularities(self.expr, self.x)
+            self.corect = True
+            self.test_type()
+        except:
+            self.corect = False
+            self.type = "False"
+
+    def test_type(
+            self):  # Попытка оптимизировать рисование функций, заранее определяя их тип. Оптимизация работает только для прямых.
+        diff = sp.diff(self.expr, self.x)
+        if diff == 0:
+            self.type = "const"
+            return
+        diff = sp.diff(diff, self.x)
+        if diff == 0:
+            self.type = "line"
+            return
+        diff = sp.diff(diff, self.x)
+        if diff == 0:
+            self.type = "parabole"
+            return
+        if 0 == sp.diff(sp.diff(sp.diff(sp.diff(diff, self.x), self.x), self.x), self.x):
+            self.type = "polinom"
+        self.type = "Hard"
+
+    def evaluate(self, point):  # Считаем значения функции, возможны вылеты, если y_value содержит мнимую часть.
+        y_value = self.expr.subs('x', point)
+        return float(y_value)
+
+    def intersection(self, func):  # Находим точки пересечения, функций, если можем:)
+        try:
+            solves = sp.solve(self.expr - func.expr, sp.symbols('x'))
+            solves2 = []
+            for x in solves:
+                if sp.simplify(x).is_real:
+                    solves2.append(x)
+            return solves2
+        except:
+            return []
+
+    def is_defined(self, point):  # Проверяем определена ли функция в точке и является ли ее значение вещественным.
+        try:
+            value = self.expr.subs(self.expr.args[0], point)
+            return sp.simplify(value).is_real
+        except:
+            return False
 
     def set_name(self, new_name):
         pass

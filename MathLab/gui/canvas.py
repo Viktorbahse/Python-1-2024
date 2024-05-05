@@ -1,21 +1,33 @@
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QGraphicsPathItem
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, \
+    QGraphicsPathItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
 from PyQt5.QtCore import Qt, QPointF, QLineF, QThread, pyqtSignal, QTimer, QObject
 from core.shapes_manager import ShapesManager
 from core.geometric_objects.figure import *
 from tests.test_distances import *
 from tests.timing import *
-import numpy as np
-import sympy as sp
 import math
 import time
+import multiprocessing
+
+
+def calculating_values(task):  # Считаем значения функции в точках.
+    x_start = task[0] + (task[1] - task[0]) / 1000000000000  # Делаем отступ от потенциально плохой точки.
+    x_end = task[1] - (task[1] - task[0]) / 10000000000000
+    size = x_end - x_start
+    count = 8
+    values = [[x_start, task[2].evaluate(x_start)]]
+    for i in range(1, count):  # Разбиваем интервал на отрезки.
+        values.append([x_start + size * i / count, task[2].evaluate(x_start + size * i / count)])
+    values.append([x_end, task[2].evaluate(x_end)])
+    return values  # Возвращаем массив пар координат
 
 
 class Canvas(QGraphicsScene):
     def __init__(self, width, height, parent=None, zoom_factor=65.0):
         super().__init__(parent)
         self.setSceneRect(0, 0, width, height)
-
+        self.pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())  # Устанавлеваемчисло
         self.shapes_manager = ShapesManager()
         self.zoom_factor = zoom_factor
         self.grid_step = 1
@@ -32,6 +44,10 @@ class Canvas(QGraphicsScene):
         self.thin_grid_path = QPainterPath()  # Мелкая сетка, представленная одним путем
 
         self.update_scene()  # Полное обновление сцены
+
+    def __del__(self):
+        self.pool.close()
+        self.pool.join()
 
     def to_logical_coords(self, scene_x, scene_y):
         center_x = self.sceneRect().width() / 2 + self.base_point[0]
@@ -106,7 +122,7 @@ class Canvas(QGraphicsScene):
                 return pretty_step * magnitude
         return pretty_steps[-1]  # Для случаев, когда шаг меньше минимального "красивого" значения
 
-    #@timeit
+    # @timeit
     def clear_scene(self):
         # Очищает все элементы сцены
         self.clear()
@@ -133,8 +149,12 @@ class Canvas(QGraphicsScene):
             self.draw_circle(shape)
         for shape in self.shapes_manager.shapes[Function]:
             self.draw_function(shape)
+        self.draw_all_fanctions()  # Рисуем функции, в следующих версиях буду использовать основной массив.
         for shape in self.shapes_manager.shapes[Point]:
             self.draw_point(shape)
+        for shape in self.shapes_manager.intersection_points:  # Использую дополнительный массив для упрощения обновления точек пересечений.
+            self.draw_point(shape)
+
         for text in self.shapes_manager.shapes[Inf]:
             self.draw_text(text.message, *self.to_scene_coords(text.x, text.y), center_x=True, center_y=True)
 
@@ -172,16 +192,44 @@ class Canvas(QGraphicsScene):
         self.addLine(center_x, 0, center_x - arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
         self.addLine(center_x, 0, center_x + arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
 
-    def draw_function(self, shape):
-        for i in range(0, 1600, 7):
-            x1, y1 = self.to_logical_coords(i, 0)
-            x2, y2 = self.to_logical_coords(i + 7, 0)
-            scene_x1, scene_y1 = self.to_scene_coords(x1, float(shape.evaluate(x1)))
-            scene_x, scene_y = self.to_scene_coords(x2, float(shape.evaluate(x2)))
-            if scene_y1 > 0 or scene_y > 0:
-                line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
-                line.setPen(QPen(QColor(*shape.color), shape.width))
-                self.addItem(line)
+    def draw_all_fanctions(self):
+        path = QPainterPath()
+        x_start, _ = self.to_logical_coords(0, 0)
+        x_end, _ = self.to_logical_coords(self.sceneRect().width(), 0)
+        tasks = []  # Массив для хранения задач, которые распределяются по потокам.
+        values = []  # Массив для хранения координат узлов ломаной.
+        for func in self.shapes_manager.functions:
+            if func.corect:
+                if func.type in ["line", "const"]:  # Оптимизация для линий.
+                    x, y = self.to_scene_coords(x_start, func.evaluate(x_start))
+                    path.moveTo(QPointF(x, y))
+                    x, y = self.to_scene_coords(x_end, func.evaluate(x_end))
+                    path.lineTo(QPointF(x, y))
+                    continue
+                bad_points = [x_start]  # точки разрыва + точки границ эрана
+                for x in func.discontinuity_points:  # Выбираем точки разрыва, которые попадают в область экрана.
+                    if x > x_start:
+                        bad_points.append(x)
+                    elif x >= x_end:
+                        break
+                bad_points.append(x_end)
+                for i in range(len(bad_points) - 1):  # Создаем задачи для вычисления значений функции на интервалах
+                    if func.is_defined((bad_points[i] + bad_points[i + 1]) / 2):
+                        dist = bad_points[i + 1] - bad_points[i]
+                        for t in range(12):
+                            tasks.append([bad_points[i] + dist * t / 12, bad_points[i] + dist * (t + 1) / 12, func,
+                                          x_end - x_start])
+                values = self.pool.map(calculating_values, tasks)  # Считаем значения функции.
+        for val in values:
+            x, y = self.to_scene_coords(val[0][0], val[0][1])
+            path.moveTo(QPointF(x, y))
+            for i in range(len(val)):
+                x, y = self.to_scene_coords(val[i][0], val[i][1])
+                path.lineTo(QPointF(x, y))
+        path_item = QGraphicsPathItem()
+        path_item.setPath(path)
+        path_item.setPen(QPen(Qt.red, 2))
+        self.addItem(path_item)
 
     def draw_grid(self, color=(80, 80, 80, 255)):
         # Отрисовка сетки

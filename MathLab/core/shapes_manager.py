@@ -1,6 +1,7 @@
 from sympy import symbols, lambdify
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
+import sympy as sp
 
 SEARCH_RADIUS = 5
 
@@ -9,9 +10,25 @@ class ShapesManager:
     def __init__(self):
         # Словарик для хранения фигур
         self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: [], Function: []}
+        self.functions = []  # Массив для функций.
+        self.intersection_points = []  # Массив для точек пересечения.
         # Словарик для временных фигур
         self.temp_shapes = {Segment: [], Line: [], Ray: [], Circle: []}
         self.selected_points = []
+
+    def resolve_intersections(self):  # Считаем точки пересечения, если можем:)
+        self.intersection_points = []
+        for i in range(len(self.functions)):
+            if self.functions[i].corect:
+                for j in range(i):
+                    if self.functions[j].corect:
+                        result = self.functions[i].intersection(self.functions[j])
+                        for x in result:
+                            y = self.functions[i].evaluate(x)
+                            self.intersection_points.append(Point(x, y))
+                            self.intersection_points[-1].set_name("")
+                            self.intersection_points[-1].set_color([155, 155, 155, 255])
+                            self.intersection_points[-1].radius = 3
 
     def add_shape(self, shape):
         if type(shape) == Point:
