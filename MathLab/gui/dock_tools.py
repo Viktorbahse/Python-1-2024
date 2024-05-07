@@ -35,7 +35,7 @@ class DockTools(QDockWidget):
             {"name": "Parallel Line", "tooltip": "Set mode Parallel Line", "statusTip": "Set mode Parallel Line"},
             {"name": "Perpendicular Line", "tooltip": "Set mode Perpendicular Line",
              "statusTip": "Set mode Perpendicular Line"},
-            {"name": "Perpendicular Bisector", "tooltip": "Set mode Parallel Perpendicular Bisector",
+            {"name": "Perpendicular Bisector", "tooltip": "Set mode Perpendicular Bisector",
              "statusTip": "Set mode Perpendicular Bisector"},
             {"name": "Angle Bisector", "tooltip": "Set mode Angle Bisector", "statusTip": "Set mode Angle Bisector"},
             {"name": "Ray", "tooltip": "Set mode Ray", "statusTip": "Set mode Ray"},

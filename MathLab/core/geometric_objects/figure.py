@@ -17,7 +17,7 @@ class Circle(Shape):
         self.point_color = color
         self.owner = owner if owner is not None else []
         for shape in self.owner:
-            self.set_color(shape.point_color)
+            self.set_color(shape.line_color)
 
     def __del__(self):
         super().__del__()
@@ -36,9 +36,24 @@ class Circle(Shape):
         center = self.entity.center
         radius = self.entity.radius
         distance_from_center = center.distance(sp.Point(float(x), float(y)))
-        # Сам расчет 
+        # Сам расчет
         distance_to_circle = abs(distance_from_center - radius)
         return float(distance_to_circle)
+
+    def projection_onto_shape(self, point):  # Проекция
+        center = sp.Point2D(self.entity.center)
+        mouse_point = sp.Point2D(point)
+        # Вектор от центра круга до данной точки
+        vector_to_point = mouse_point - center
+        length = sp.sqrt(vector_to_point[0] ** 2 + vector_to_point[1] ** 2)
+        # Нормализуем вектор
+        normalized_vector = sp.Point2D(vector_to_point[0] / length, vector_to_point[1] / length)
+        # Находим точку на окружности, находящуюся на линии, соединяющей центр круга и данную точку
+        projection = center + normalized_vector * self.entity.radius
+        return projection
+
+    def contains(self, point):  # Содержится ли точка
+        return self.center.distance(point) == self.radius
 
     def set_name(self, new_name):
         pass
