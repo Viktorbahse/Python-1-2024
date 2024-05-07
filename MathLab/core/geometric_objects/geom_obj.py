@@ -1,4 +1,6 @@
 import sympy as sp
+from math import *
+from core.geometric_objects.figure import *
 import re
 from abc import ABC, abstractmethod
 
@@ -73,10 +75,16 @@ class Shape(ABC):
     def distance_to_shape(self, x, y):
         return self.entity.distance(sp.Point(float(x), float(y)))
 
+    def projection_onto_shape(self, point):  # Проекция на объект
+        return self.entity.projection(point)
+
+    def contains(self, point):  # Содержится ли точка
+        self.entity.contains(point)
+
     def update_color(self):
         # Устанавливает цвет, если есть несколько владельцев, то уст средний
         if len(self.owner) == 0:
-            self.set_color((71, 181, 255, 255))
+            self.set_color([71, 181, 255, 255])
         elif len(self.owner) == 1:
             self.set_color(self.owner[0].point_color)
         else:
@@ -111,9 +119,11 @@ class Point(Shape):
     used_names = [0] * 26
 
     def __init__(self, x, y, color=(71, 181, 255, 255), owner=None):
-        super().__init__(sp.Point(x, y), color=color)
+        super().__init__(sp.Point(x, y))
         self.name = None
-        self.point_color = color
+        self.color = color
+        self.point_color = [105, 105, 105, 255]
+        self.line_color = [105, 105, 105, 255]
         self.radius = 5
         self.owner = owner if owner is not None else []  # Определяем список
         self.update_color()
@@ -154,7 +164,7 @@ class Segment(Shape):
 
         self.point_color = color
         for shape in self.owner:
-            self.set_color(shape.point_color)
+            self.set_color(shape.line_color)
 
     def __del__(self):
         super().__del__()
@@ -182,7 +192,7 @@ class Line(Shape):
         self.point_color = color
         self.owner = owner if owner is not None else []
         for shape in self.owner:
-            self.set_color(shape.point_color)
+            self.set_color(shape.line_color)
 
     def __del__(self):
         super().__del__()
@@ -210,7 +220,7 @@ class Ray(Shape):
         self.point_color = color
         self.owner = owner if owner is not None else []
         for shape in self.owner:
-            self.set_color(shape.point_color)
+            self.set_color(shape.line_color)
 
     def __del__(self):
         super().__del__()

@@ -106,7 +106,7 @@ class Canvas(QGraphicsScene):
                 return pretty_step * magnitude
         return pretty_steps[-1]  # Для случаев, когда шаг меньше минимального "красивого" значения
 
-    #@timeit
+    # @timeit
     def clear_scene(self):
         # Очищает все элементы сцены
         self.clear()
@@ -221,8 +221,13 @@ class Canvas(QGraphicsScene):
         def format_label_value(value):
             if math.isclose(value, 0, abs_tol=1e-15):
                 return "0"  # Для нуля всегда возвращаем "0"
-            elif abs(value) >= upper_threshold or (abs(value) < lower_threshold and value != 0):
+            elif abs(value) >= upper_threshold or int(value) == 0:
                 return "{:.1e}".format(value)
+            elif abs(value - int(value)) < lower_threshold and (value - int(value)) != 0:
+                int_part = int(value)
+                fractional_part = value - int_part
+                fractional_str = "{:.1e}".format(fractional_part)
+                return "{} + {}".format(int_part, fractional_str)
             else:
                 return str(round(value, 4))  # Округление для обычных чисел
 

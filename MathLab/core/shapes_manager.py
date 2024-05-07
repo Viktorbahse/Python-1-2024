@@ -1,6 +1,7 @@
 from sympy import symbols, lambdify
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
+from tests.timing import *
 
 SEARCH_RADIUS = 5
 
@@ -41,60 +42,22 @@ class ShapesManager:
     def clear_selected_points(self):
         self.selected_points = []
 
-    def find_closest_point(self, x, y, radius=SEARCH_RADIUS):
-        # Поиск ближайшей точки в заданном радиусе
-        closest_point = None
-        distance = radius + 1
-        for shape in self.shapes[Point]:
-            if shape.distance_to_shape(x, y) < distance:
-                distance = shape.distance_to_shape(x, y)
-                closest_point = shape
-        if distance < radius:
-            return closest_point
-        return None
-
-    def find_closest_line(self, x, y, radius=SEARCH_RADIUS):
-        closest_shape = None
-        distance = radius + 1
-        for shape in self.shapes[Line]:
-            if len(shape.points) == 2 or shape.entity is not None:
-                if shape.distance_to_shape(x, y) < distance:
-                    closest_shape = shape.entity
-                    distance = shape.distance_to_shape(x, y)
-        for shape in self.shapes[Ray]:
-            if len(shape.points) == 2:
-                if shape.distance_to_shape(x, y) < distance:
-                    closest_shape = shape.entity
-                    distance = shape.distance_to_shape(x, y)
-        for shape in self.shapes[Segment]:
-            if len(shape.points) == 2:
-                if shape.distance_to_shape(x, y) < distance:
-                    closest_shape = shape.entity
-                    distance = shape.distance_to_shape(x, y)
-        for shape in self.shapes[Polygon]:
-            if shape.finished:
-                closest_temp_side = shape.closest_side(x, y)
-                distance_to_closest_side = closest_temp_side.distance(sp.Point(x, y))
-                if distance_to_closest_side < distance:
-                    distance = distance_to_closest_side
-                    closest_shape = closest_temp_side
-        if distance < radius:
-            return closest_shape
-        return None
-
     def find_closest_shape(self, x, y, radius=SEARCH_RADIUS):
         # Находит ближайший объект и расстояние до него
         closest_shape = None
         min_distance = float('inf')
+        all_shapes = []
 
         for shape_list in self.shapes.values():
             for shape in shape_list:
                 distance = shape.distance_to_shape(x, y)  # Этот метод должен вычислять расстояние от точки до объекта
-                if distance < radius and distance < min_distance:
-                    min_distance = distance
-                    closest_shape = shape
+                if distance < radius:
+                    all_shapes.append(shape)
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_shape = shape
 
-        return closest_shape, min_distance
+        return closest_shape, min_distance, all_shapes
 
     @staticmethod
     def distance(array_points: []):
