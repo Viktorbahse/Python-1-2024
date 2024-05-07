@@ -3,20 +3,12 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence, QCursor, QPixmap
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
+from core.geometry_utils import *
+from tests.timing import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
 import sympy as sp
 import time
-
-
-def bisector(a, b, c):
-    ba = a - b
-    bc = c - b
-    ba_unit = ba / sp.sqrt(ba.dot(ba))
-    bc_unit = bc / sp.sqrt(bc.dot(bc))
-    bisector_unit = (ba_unit + bc_unit) / 2
-    bisector_point = b + 1 * bisector_unit
-    return sp.Line(sp.Point(float(b.x), float(b.y)), sp.Point(float(bisector_point.x), float(bisector_point.y)))
 
 
 class CustomGraphicsView(QGraphicsView):
@@ -61,7 +53,7 @@ class CustomGraphicsView(QGraphicsView):
             self.draw_temp_parallel_line(sp.Point(logical_pos[0], logical_pos[1]))
         elif self.temp_point is not None and self.temp_point.distance_to_shape(logical_pos[0], logical_pos[1]) != 0:
             if self.current_tool == 'Perpendicular Bisector':
-                temp_shape = Line()
+                temp_shape = Line(color=temp_color)
                 temp_shape.entity = (
                     sp.Line(self.temp_point.entity, sp.Point(logical_pos[0], logical_pos[1]))).perpendicular_line(
                     self.temp_point.entity.midpoint(sp.Point(logical_pos[0], logical_pos[1])))
@@ -98,11 +90,24 @@ class CustomGraphicsView(QGraphicsView):
         self.saveBasePointX = self.scene().base_point[0]
         self.saveBasePointY = self.scene().base_point[1]
 
-    def handle_point_creation(self, logical_pos=None, point=None, closest_point=False):
+    def handle_point_creation(self, logical_pos=None, point=None, closest_point=False, closest_shape=None):
         # Добавляет точку на сцену
         if not closest_point:  # Добавляет новую только тогда, когда не найдена точка в ближайшем радиусе
             if logical_pos is not None:
                 point = Point(logical_pos[0], logical_pos[1])
+            else:
+                logical_pos = [None, None]
+                logical_pos[0], logical_pos[1] = point.entity
+
+            closest_shape = self.scene().shapes_manager.find_closest_shape(logical_pos[0], logical_pos[1],
+                                                                           10 / self.scene().zoom_factor)
+            lines = [shape for shape in closest_shape[2] if isinstance(shape, (Line, Segment, Ray, Circle))]
+            # Находим лучшее местоположение для новой точки
+            target_pos, target_lines = find_best_target(logical_pos, lines, radius=10 / self.scene().zoom_factor)
+            point.entity = sp.Point(target_pos[0], target_pos[1])
+            for line in target_lines:
+                point.add_owner(line)
+                line.add_secondary_element(point)
             self.scene().shapes_manager.add_shape(point)
 
     def handle_midpoint_creation(self, logical_pos=None, closest_point=False):
@@ -120,19 +125,26 @@ class CustomGraphicsView(QGraphicsView):
                 self.handle_point_creation(point=final_point)
 
             if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
-                point = self.temp_point.entity.midpoint(final_point.entity)
-                self.scene().shapes_manager.add_shape(
-                    Point(point.x, point.y, [105, 105, 105, 255], owner=[self.temp_point, final_point]))
+                coords = self.temp_point.entity.midpoint(final_point.entity)
+                point = Point(coords.x, coords.y, owner=[self.temp_point, final_point])
+                self.temp_point.add_secondary_element(point)
+                final_point.add_secondary_element(point)
+
+                self.handle_point_creation(point=point)
                 self.temp_point = None
 
     def handle_perpendicular_bisector_creation(self, logical_pos, closest_point):
         if closest_point is not None:
             if self.temp_point is None:
                 self.current_line = Line()
-                closest_point.add_owner(owner=self.current_line)
+                self.current_line.add_owner(closest_point)
+                closest_point.add_secondary_element(self.current_line)
+
                 self.temp_point = closest_point
             else:
-                closest_point.add_owner(owner=self.current_line)
+                self.current_line.add_owner(closest_point)
+                closest_point.add_secondary_element(self.current_line)
+
                 final_point = closest_point
                 if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
                     self.scene().shapes_manager.clear_temp_shapes(Line)
@@ -143,46 +155,53 @@ class CustomGraphicsView(QGraphicsView):
 
     def handle_angle_bisector_creation(self, logical_pos, closest_point):
         if closest_point is not None:
+
             if self.temp_point is None:
                 self.current_line = Line()
-                closest_point.add_owner(owner=self.current_line)
                 self.temp_point = closest_point
-            elif self.temp_point1 is None and self.temp_point.distance_to_shape(closest_point.entity.x,
+            self.current_line.add_owner(closest_point)
+            closest_point.add_secondary_element(self.current_line)
+            if self.temp_point1 is None and self.temp_point.distance_to_shape(closest_point.entity.x,
                                                                                 closest_point.entity.y) != 0:
-                closest_point.add_owner(owner=self.current_line)
                 self.temp_point1 = closest_point
             elif self.temp_point.distance_to_shape(closest_point.entity.x,
                                                    closest_point.entity.y) != 0 and self.temp_point1.distance_to_shape(
                 closest_point.entity.x, closest_point.entity.y) != 0:
-                closest_point.add_owner(owner=self.current_line)
                 final_point = closest_point
+
                 self.scene().shapes_manager.clear_temp_shapes(Line)
                 self.current_line.entity = bisector(self.temp_point.entity, self.temp_point1.entity, final_point.entity)
                 self.scene().shapes_manager.add_shape(self.current_line)
                 self.temp_point = None
                 self.temp_point1 = None
 
-    def handle_perpendicular_line_creation(self, logical_pos, closest_point, closest_line):
+    def handle_perpendicular_line_creation(self, logical_pos, closest_shape):
         if self.temp_line is None and self.temp_point is None:
             self.current_line = Line()  # Создаем пустую линию.
-            if closest_line is not None:
-                self.temp_line = closest_line.perpendicular_line(sp.Point(logical_pos[0], logical_pos[1]))
+            if isinstance(closest_shape[0], (Segment, Line, Ray)):  # Если есть ближайшая линия
+                self.current_line.add_owner(closest_shape[0])
+                closest_shape[0].add_secondary_element(self.current_line)
+                self.temp_line = closest_shape[0].entity.perpendicular_line(sp.Point(logical_pos[0], logical_pos[1]))
             else:
-                if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
-                    closest_point.add_owner(owner=self.current_line)
+                if isinstance(closest_shape[0], Point):  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
+                    closest_point = closest_shape[0]
                     self.temp_point = closest_point
                 else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
-                    self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                    self.temp_point = Point(logical_pos[0], logical_pos[1])
                     self.handle_point_creation(point=self.temp_point)
-                self.current_line.add_point(self.temp_point)
+                self.current_line.add_owner(self.temp_point)
+                self.temp_point.add_secondary_element(self.current_line)
+                # self.current_line.add_point(self.temp_point)
         elif self.temp_line is not None and self.temp_point is None:
-            if closest_point:
-                closest_point.add_owner(owner=self.current_line)
-                final_point = closest_point
+            if isinstance(closest_shape[0], Point):
+                # closest_point = closest_shape[0].add_owner(owner=self.current_line)
+                final_point = closest_shape[0]
             else:
-                final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                final_point = Point(logical_pos[0], logical_pos[1])
                 self.handle_point_creation(point=final_point)
-            self.current_line.add_point(final_point)
+            self.current_line.add_owner(final_point)
+            final_point.add_secondary_element(self.current_line)
+
             self.current_line.entity = self.temp_line.parallel_line(
                 sp.Point(final_point.entity.x, final_point.entity.y))
             self.scene().shapes_manager.clear_temp_shapes()
@@ -190,36 +209,45 @@ class CustomGraphicsView(QGraphicsView):
             self.temp_point = None
             self.temp_line = None
         elif self.temp_line is None and self.temp_point is not None:
-            if closest_line is not None:
-                self.temp_line = closest_line
-                self.current_line.entity = self.temp_line.perpendicular_line(
+            if isinstance(closest_shape[0], (Segment, Line, Ray)):
+                self.temp_line = closest_shape[0]
+                self.current_line.add_owner(self.temp_line)
+                self.temp_line.add_secondary_element(self.current_line)
+
+                self.current_line.entity = self.temp_line.entity.perpendicular_line(
                     sp.Point(self.temp_point.entity.x, self.temp_point.entity.y))
                 self.scene().shapes_manager.clear_temp_shapes()
                 self.scene().shapes_manager.add_shape(self.current_line)
                 self.temp_point = None
                 self.temp_line = None
 
-    def handle_parallel_line_creation(self, logical_pos, closest_point, closest_line):
+    def handle_parallel_line_creation(self, logical_pos, closest_shape):
         if self.temp_line is None and self.temp_point is None:
             self.current_line = Line()  # Создаем пустую линию.
-            if closest_line is not None:
-                self.temp_line = closest_line
+            if isinstance(closest_shape[0], (Segment, Line, Ray)):  # Если есть ближайшая линия
+                self.current_line.add_owner(closest_shape[0])
+                closest_shape[0].add_secondary_element(self.current_line)
+                self.temp_line = closest_shape[0].entity
             else:
-                if closest_point:  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
-                    closest_point.add_owner(owner=self.current_line)
+                if isinstance(closest_shape[0], Point):  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
+                    closest_point = closest_shape[0]
                     self.temp_point = closest_point
                 else:  # Если не нашлась, то устанавливаем начальную точку по координатам курсора.
-                    self.temp_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                    self.temp_point = Point(logical_pos[0], logical_pos[1])
                     self.handle_point_creation(point=self.temp_point)
-                self.current_line.add_point(self.temp_point)
+                self.current_line.add_owner(self.temp_point)
+                self.temp_point.add_secondary_element(self.current_line)
+                # self.current_line.add_point(self.temp_point)
         elif self.temp_line is not None and self.temp_point is None:
-            if closest_point:
-                closest_point.add_owner(owner=self.current_line)
-                final_point = closest_point
+            if isinstance(closest_shape[0], Point):
+                #closest_point = closest_shape[0].add_owner(owner=self.current_line)
+                final_point = closest_shape[0]
             else:
-                final_point = Point(logical_pos[0], logical_pos[1], owner=[self.current_line])
+                final_point = Point(logical_pos[0], logical_pos[1])
                 self.handle_point_creation(point=final_point)
-            self.current_line.add_point(final_point)
+            self.current_line.add_owner(final_point)
+            final_point.add_secondary_element(self.current_line)
+
             self.current_line.entity = self.temp_line.parallel_line(
                 sp.Point(final_point.entity.x, final_point.entity.y))
             self.scene().shapes_manager.clear_temp_shapes()
@@ -227,9 +255,12 @@ class CustomGraphicsView(QGraphicsView):
             self.temp_point = None
             self.temp_line = None
         elif self.temp_line is None and self.temp_point is not None:
-            if closest_line is not None:
-                self.temp_line = closest_line
-                self.current_line.entity = self.temp_line.parallel_line(
+            if isinstance(closest_shape[0], (Segment, Line, Ray)):
+                self.temp_line = closest_shape[0]
+                self.current_line.add_owner(self.temp_line)
+                self.temp_line.add_secondary_element(self.current_line)
+
+                self.current_line.entity = self.temp_line.entity.parallel_line(
                     sp.Point(self.temp_point.entity.x, self.temp_point.entity.y))
                 self.scene().shapes_manager.clear_temp_shapes()
                 self.scene().shapes_manager.add_shape(self.current_line)
@@ -367,6 +398,7 @@ class CustomGraphicsView(QGraphicsView):
                 closest_point.add_owner(new_segment)
 
                 self.current_polygon.add_secondary_element(new_segment)
+                self.current_polygon.add_primary_element(new_segment)
 
             self.scene().shapes_manager.clear_temp_shapes(Segment)
             self.scene().shapes_manager.add_shape(self.current_polygon)
@@ -389,6 +421,7 @@ class CustomGraphicsView(QGraphicsView):
                     new_point.add_owner(new_segment)
 
                     self.current_polygon.add_secondary_element(new_segment)
+                    self.current_polygon.add_primary_element(new_segment)
                 self.polygon_points.append(new_point)
                 self.current_polygon.add_point(new_point)
 
@@ -396,12 +429,8 @@ class CustomGraphicsView(QGraphicsView):
 
     def handle_delete(self, shape):
         # Метод для корректного удаления объектов
-        while len(shape.secondary_elements) != 0:  # Сначала удаляем все второстепенные элементы (не сущ без shape)
-            element = shape.secondary_elements[0]
-            shape.remove_secondary_element(element)
-            self.handle_delete(element)  # Запускаем рекурсию
 
-        for element in shape.primary_elements:  # Основные элементы продолжают жить без shape
+        for element in shape.primary_elements:  # Сначала удаляем основные элементы (продолжают жить без shape)
             element.remove_owner(shape)
 
         if shape.owner:
@@ -415,6 +444,10 @@ class CustomGraphicsView(QGraphicsView):
                 else:
                     owner.remove_primary_element(shape)
                     self.handle_delete(owner)
+        while len(shape.secondary_elements) != 0:  # Удаляем все второстепенные элементы (не сущ без shape)
+            element = shape.secondary_elements[0]
+            shape.remove_secondary_element(element)
+            self.handle_delete(element)  # Запускаем рекурсию
 
         self.scene().shapes_manager.remove_shape(shape)
 
@@ -432,15 +465,15 @@ class CustomGraphicsView(QGraphicsView):
             cursor = QCursor(pixmap)
             self.setCursor(cursor)  # Устанавливаем курсор для QGraphicsView
 
+    # @timeit
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         scene_pos = self.mapToScene(event.pos())
         logical_pos = self.scene().to_logical_coords(scene_pos.x(), scene_pos.y())
+        closest_shape = self.scene().shapes_manager.find_closest_shape(logical_pos[0], logical_pos[1],
+                                                                       10 / self.scene().zoom_factor)
 
-        closest_point = self.scene().shapes_manager.find_closest_point(logical_pos[0], logical_pos[1],
-                                                                       10 / self.scene().zoom_factor)  # Ближайшие точки
-        closest_line = self.scene().shapes_manager.find_closest_line(logical_pos[0], logical_pos[1],
-                                                                     10 / self.scene().zoom_factor)  # Ближайшая линия
+        closest_point = next((shape for shape in closest_shape[2] if isinstance(shape, Point)), None)  # Ближайшая точка
 
         if self.grid_gravity_mode:
             gravity_coordinates = (round(logical_pos[0] / self.scene().grid_step) * self.scene().grid_step,
@@ -454,22 +487,19 @@ class CustomGraphicsView(QGraphicsView):
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
         else:
             if self.current_tool in ['Parallel Line', 'Perpendicular Line']:
-                self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point,
-                                                      closest_line=closest_line)
+                self.drawing_tools[self.current_tool](logical_pos, closest_shape)
             elif self.current_tool == 'Distance':
                 self.handle_distance_tool(closest_point=closest_point)
             elif self.current_tool == 'Move':
                 self.handle_move_canvas(scene_pos=scene_pos)
             elif self.current_tool == 'Eraser':
                 self.change_cursor()
-                closest_shape = self.scene().shapes_manager.find_closest_shape(logical_pos[0], logical_pos[1],
-                                                                               10 / self.scene().zoom_factor)
                 if closest_shape[0]:  # Если найдена ближайшая фигура
                     self.handle_delete(closest_shape[0])
 
         self.scene().update_scene()
 
-        # TODO: (Winter) оптимизировать closest_point и closest_line
+        # TODO: (Winter) find_closest_shape есть в handle_point, нужно убрать
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
