@@ -10,6 +10,7 @@ from gui.canvas import Canvas
 from gui.dock_tools import DockTools
 from core.geometric_objects.geom_obj import Point, Line, Segment, Ray, Info
 from core.geometric_objects.figure import Circle, Polygon
+from dlgselectmode import DlgSelectMode
 
 default_size = [1200, 800]
 
@@ -24,6 +25,25 @@ class MainWindow(QMainWindow):
         self.initUI()
         self.initMenu()
         self.scene.shapes_manager.comm.shapesChanged.connect(self.onSceneChanged)
+
+    def closeEvent(self, event):
+        if self.confirmContinue():
+            event.accept()
+        else:
+            event.ignore()
+    def showEvent(self, event):
+        self.selectMode()
+        event.accept()
+
+    def selectMode(self):
+        if not self.confirmContinue():
+            return
+        dlg = DlgSelectMode()
+        if dlg.exec():
+            self.modeGame = dlg.modeGame
+            print("selected mode is ", self.modeGame)
+        else:
+            print("reject")
 
     def onSceneChanged(self):
         self.setWindowModified(True)
@@ -74,10 +94,20 @@ class MainWindow(QMainWindow):
 
         fileMenu.addSeparator()
 
+        selectModeAction = QAction('Выбрать режим...', self)
+        selectModeAction.triggered.connect(self.selectMode)
+        fileMenu.addAction(selectModeAction)
+
+        fileMenu.addSeparator()
+
         exitAction = QAction('Выход', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.triggered.connect(self.close)
         fileMenu.addAction(exitAction)
+
+
+    def onClose(self):
+        self.confirmContinue()
 
     def confirmContinue(self):
         if not self.isWindowModified():
