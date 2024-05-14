@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QGraphicsView, QShortcut
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QKeySequence, QCursor, QPixmap
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
@@ -18,12 +18,16 @@ class CustomGraphicsView(QGraphicsView):
         self.min_zoom_factor = 1e-11
         self.zoom_multiplier = 1.05
 
-        self.startMove = False
         self.current_tool = 'Move'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
         self.temp_point = None  # Временная точка для начала сегмента.
         self.temp_point1 = None
         self.temp_line = None
+
+        self.start_move = False
+        self.start_move_point = None  # Точка начала перемещения
+        self.moving_point = None  # Перемещаемая точка
+
         self.grid_gravity_mode = True
 
         # Связывает название инструмента для рисования с методом, который будет вызван при нажатии на мышку при этом инструменте
@@ -80,15 +84,12 @@ class CustomGraphicsView(QGraphicsView):
         # Добавляет временную линию в shapes_manager для отрисовки. Принимает точки класса Point.
         self.scene().shapes_manager.clear_temp_shapes()
         line = Line()
-        line.entity = self.temp_line.parallel_line(point)
+        if not isinstance(self.temp_line, sp.Line2D):  # Что-то страшное происходило в перпендикулярах, там трогать не стала
+            line.entity = self.temp_line.entity.parallel_line(point)
+        else:
+            line.entity = self.temp_line.parallel_line(point)
         line.set_color(color)  # Чтобы цвет временной линии был такой же, как у остальных
         self.scene().shapes_manager.add_temp_shape(line)
-
-    def handle_move_canvas(self, scene_pos):
-        self.startMove = True
-        self.startMovePoint = scene_pos
-        self.saveBasePointX = self.scene().base_point[0]
-        self.saveBasePointY = self.scene().base_point[1]
 
     def handle_point_creation(self, logical_pos=None, point=None, closest_point=False, closest_shape=None):
         # Добавляет точку на сцену
@@ -107,7 +108,39 @@ class CustomGraphicsView(QGraphicsView):
             point.entity = sp.Point(target_pos[0], target_pos[1])
             for line in target_lines:
                 point.add_owner(line)
+                if isinstance(line, Circle):
+                    a = sp.Point([line.primary_elements[0].entity.x, line.primary_elements[0].entity.y])
+                    b = sp.Point([line.primary_elements[1].entity.x, line.primary_elements[1].entity.y])
+                    formula = lambda a=a, b=b, c=point, a_new=line.primary_elements[0], b_new=line.primary_elements[1], is_circle=True, use_nearest_intersection=False: \
+                        (update_secondary_point_coords(c, a, a_new, b, b_new, is_circle=is_circle, use_nearest_intersection=use_nearest_intersection))
+                    point.set_proportion(line.primary_elements[0], formula)
+                    point.set_proportion(line.primary_elements[1], formula)
+                    point.set_proportion(line, formula)
+                elif len(line.primary_elements) == 0:  # Странные чуваки
+                    owner_points = []
+                    for element in line.owner:
+                        if isinstance(element, Point):
+                            owner_points.append(element)
+                    if len(owner_points) == 1:  # Если параллельная и так далее
+                        owner_point = owner_points[0]
+                    elif len(owner_points) == 3:  # Для биссектрисы
+                        owner_point = owner_points[1]
+                    a = sp.Point([owner_point.entity.x, owner_point.entity.y])
+                    formula = lambda a=a, b=None, c=point, a_new=owner_point, b_new=None, line=line, use_nearest_intersection=False: ( 
+                        update_secondary_point_coords(c, a, a_new, b, b_new, line=line, use_nearest_intersection=use_nearest_intersection))
+                    point.set_proportion(owner_point, formula)
+                    point.set_proportion(line, formula)
+                elif len(line.primary_elements) == 2:
+                    a = sp.Point([line.primary_elements[0].entity.x, line.primary_elements[0].entity.y])
+                    b = sp.Point([line.primary_elements[1].entity.x, line.primary_elements[1].entity.y])
+                    formula = lambda a=a, b=b, c=point, a_new=line.primary_elements[0], b_new=line.primary_elements[1], use_nearest_intersection=False: (
+                        update_secondary_point_coords(c, a, a_new, b, b_new, use_nearest_intersection=use_nearest_intersection))
+                    point.set_proportion(line.primary_elements[0], formula)
+                    point.set_proportion(line.primary_elements[1], formula)
+                    point.set_proportion(line, formula)
+
                 line.add_secondary_element(point)
+                point.add_connected_shape(line)
             self.scene().shapes_manager.add_shape(point)
 
     def handle_midpoint_creation(self, logical_pos=None, closest_point=False):
@@ -125,10 +158,11 @@ class CustomGraphicsView(QGraphicsView):
                 self.handle_point_creation(point=final_point)
 
             if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
-                coords = self.temp_point.entity.midpoint(final_point.entity)
+                formula = lambda p1=self.temp_point, p2=final_point: sp.Point(p1.entity.midpoint(p2.entity))
+                coords = formula()
                 point = Point(coords.x, coords.y, owner=[self.temp_point, final_point])
-                self.temp_point.add_secondary_element(point)
-                final_point.add_secondary_element(point)
+                self.temp_point.add_secondary_element(point, formula=formula)
+                final_point.add_secondary_element(point, formula=formula)
 
                 self.handle_point_creation(point=point)
                 self.temp_point = None
@@ -148,14 +182,17 @@ class CustomGraphicsView(QGraphicsView):
                 final_point = closest_point
                 if self.temp_point.distance_to_shape(final_point.entity.x, final_point.entity.y) != 0:
                     self.scene().shapes_manager.clear_temp_shapes(Line)
-                    self.current_line.entity = (sp.Line(self.temp_point.entity, final_point.entity)).perpendicular_line(
-                        self.temp_point.entity.midpoint(final_point.entity))
+                    formula = lambda p1=self.temp_point, p2=final_point: (
+                        sp.Line(p1.entity, p2.entity).perpendicular_line(p1.entity.midpoint(p2.entity)))
+
+                    self.current_line.entity = formula()
+                    self.current_line.set_proportion(self.temp_point, formula)
+                    self.current_line.set_proportion(final_point, formula)
                     self.scene().shapes_manager.add_shape(self.current_line)
                     self.temp_point = None
 
     def handle_angle_bisector_creation(self, logical_pos, closest_point):
         if closest_point is not None:
-
             if self.temp_point is None:
                 self.current_line = Line()
                 self.temp_point = closest_point
@@ -164,13 +201,18 @@ class CustomGraphicsView(QGraphicsView):
             if self.temp_point1 is None and self.temp_point.distance_to_shape(closest_point.entity.x,
                                                                                 closest_point.entity.y) != 0:
                 self.temp_point1 = closest_point
-            elif self.temp_point.distance_to_shape(closest_point.entity.x,
-                                                   closest_point.entity.y) != 0 and self.temp_point1.distance_to_shape(
-                closest_point.entity.x, closest_point.entity.y) != 0:
+            elif (self.temp_point.distance_to_shape(closest_point.entity.x, closest_point.entity.y) != 0 and
+                  self.temp_point1.distance_to_shape(closest_point.entity.x, closest_point.entity.y) != 0):
                 final_point = closest_point
-
                 self.scene().shapes_manager.clear_temp_shapes(Line)
-                self.current_line.entity = bisector(self.temp_point.entity, self.temp_point1.entity, final_point.entity)
+
+                formula = lambda p1=self.temp_point, p2=self.temp_point1, p3=final_point: (
+                    bisector(p1.entity, p2.entity, p3.entity))
+                self.current_line.entity = formula()
+                self.current_line.set_proportion(self.temp_point, formula)
+                self.current_line.set_proportion(self.temp_point1, formula)
+                self.current_line.set_proportion(final_point, formula)
+
                 self.scene().shapes_manager.add_shape(self.current_line)
                 self.temp_point = None
                 self.temp_point1 = None
@@ -182,6 +224,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_line.add_owner(closest_shape[0])
                 closest_shape[0].add_secondary_element(self.current_line)
                 self.temp_line = closest_shape[0].entity.perpendicular_line(sp.Point(logical_pos[0], logical_pos[1]))
+                self.primordial_shape = closest_shape[0]  # Для формулы мне нужна изначальная форма. По сути костыль
             else:
                 if isinstance(closest_shape[0], Point):  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
                     closest_point = closest_shape[0]
@@ -191,10 +234,8 @@ class CustomGraphicsView(QGraphicsView):
                     self.handle_point_creation(point=self.temp_point)
                 self.current_line.add_owner(self.temp_point)
                 self.temp_point.add_secondary_element(self.current_line)
-                # self.current_line.add_point(self.temp_point)
         elif self.temp_line is not None and self.temp_point is None:
             if isinstance(closest_shape[0], Point):
-                # closest_point = closest_shape[0].add_owner(owner=self.current_line)
                 final_point = closest_shape[0]
             else:
                 final_point = Point(logical_pos[0], logical_pos[1])
@@ -202,8 +243,14 @@ class CustomGraphicsView(QGraphicsView):
             self.current_line.add_owner(final_point)
             final_point.add_secondary_element(self.current_line)
 
-            self.current_line.entity = self.temp_line.parallel_line(
-                sp.Point(final_point.entity.x, final_point.entity.y))
+            formula = lambda line=self.primordial_shape, p1=final_point: (
+                line.entity.perpendicular_line(sp.Point(p1.entity.x, p1.entity.y)))
+            self.current_line.entity = formula()
+            self.current_line.set_proportion(self.primordial_shape, formula)
+            self.current_line.set_proportion(final_point, formula)
+
+            #self.current_line.entity = self.temp_line.parallel_line(
+            #    sp.Point(final_point.entity.x, final_point.entity.y))
             self.scene().shapes_manager.clear_temp_shapes()
             self.scene().shapes_manager.add_shape(self.current_line)
             self.temp_point = None
@@ -214,8 +261,14 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_line.add_owner(self.temp_line)
                 self.temp_line.add_secondary_element(self.current_line)
 
-                self.current_line.entity = self.temp_line.entity.perpendicular_line(
-                    sp.Point(self.temp_point.entity.x, self.temp_point.entity.y))
+                formula = lambda line=self.temp_line, p1=self.temp_point: (
+                    line.entity.perpendicular_line(sp.Point(p1.entity.x, p1.entity.y)))
+                self.current_line.entity = formula()
+                self.current_line.set_proportion(self.temp_line, formula)
+                self.current_line.set_proportion(self.temp_point, formula)
+
+                #self.current_line.entity = self.temp_line.entity.perpendicular_line(
+                    #sp.Point(self.temp_point.entity.x, self.temp_point.entity.y))
                 self.scene().shapes_manager.clear_temp_shapes()
                 self.scene().shapes_manager.add_shape(self.current_line)
                 self.temp_point = None
@@ -227,7 +280,7 @@ class CustomGraphicsView(QGraphicsView):
             if isinstance(closest_shape[0], (Segment, Line, Ray)):  # Если есть ближайшая линия
                 self.current_line.add_owner(closest_shape[0])
                 closest_shape[0].add_secondary_element(self.current_line)
-                self.temp_line = closest_shape[0].entity
+                self.temp_line = closest_shape[0]
             else:
                 if isinstance(closest_shape[0], Point):  # Если рядом с курсором нашлась точка, то устанавливаем ее как начальную.
                     closest_point = closest_shape[0]
@@ -237,10 +290,8 @@ class CustomGraphicsView(QGraphicsView):
                     self.handle_point_creation(point=self.temp_point)
                 self.current_line.add_owner(self.temp_point)
                 self.temp_point.add_secondary_element(self.current_line)
-                # self.current_line.add_point(self.temp_point)
         elif self.temp_line is not None and self.temp_point is None:
             if isinstance(closest_shape[0], Point):
-                #closest_point = closest_shape[0].add_owner(owner=self.current_line)
                 final_point = closest_shape[0]
             else:
                 final_point = Point(logical_pos[0], logical_pos[1])
@@ -248,8 +299,14 @@ class CustomGraphicsView(QGraphicsView):
             self.current_line.add_owner(final_point)
             final_point.add_secondary_element(self.current_line)
 
-            self.current_line.entity = self.temp_line.parallel_line(
-                sp.Point(final_point.entity.x, final_point.entity.y))
+            formula = lambda line=self.temp_line, p1=final_point: (
+                line.entity.parallel_line(sp.Point(p1.entity.x, p1.entity.y)))
+            self.current_line.entity = formula()
+            self.current_line.set_proportion(self.temp_line, formula)
+            self.current_line.set_proportion(final_point, formula)
+
+            #self.current_line.entity = self.temp_line.parallel_line(
+            #    sp.Point(final_point.entity.x, final_point.entity.y))
             self.scene().shapes_manager.clear_temp_shapes()
             self.scene().shapes_manager.add_shape(self.current_line)
             self.temp_point = None
@@ -260,8 +317,14 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_line.add_owner(self.temp_line)
                 self.temp_line.add_secondary_element(self.current_line)
 
-                self.current_line.entity = self.temp_line.entity.parallel_line(
-                    sp.Point(self.temp_point.entity.x, self.temp_point.entity.y))
+                formula = lambda line=self.temp_line, p1=self.temp_point: (
+                    line.entity.parallel_line(sp.Point(p1.entity.x, p1.entity.y)))
+                self.current_line.entity = formula()
+                self.current_line.set_proportion(self.temp_line, formula)
+                self.current_line.set_proportion(self.temp_point, formula)
+
+                #self.current_line.entity = self.temp_line.entity.parallel_line(
+                #    sp.Point(self.temp_point.entity.x, self.temp_point.entity.y))
                 self.scene().shapes_manager.clear_temp_shapes()
                 self.scene().shapes_manager.add_shape(self.current_line)
                 self.temp_point = None
@@ -427,29 +490,181 @@ class CustomGraphicsView(QGraphicsView):
 
         self.scene().shapes_manager.clear_temp_shapes(Segment)
 
-    def handle_delete(self, shape):
-        # Метод для корректного удаления объектов
+    def handle_delete(self, shape, is_invisible=None):
+        # Метод для корректного удаления объектов. Также достает и убирает объекты в невидимость
 
         for element in shape.primary_elements:  # Сначала удаляем основные элементы (продолжают жить без shape)
-            element.remove_owner(shape)
+            element.remove_owner(shape, is_invisible=is_invisible)
 
         if shape.owner:
+            len_owners = len(shape.owner)
             while len(shape.owner) != 0:
-                owner = shape.owner[0]
+                if is_invisible and len_owners == 0:
+                    break
+                owner = shape.owner[len_owners - 1]
 
                 # Если наша точка не является основной, то она удаляется без всяких последствий для owner
                 if shape in owner.secondary_elements:
-                    owner.remove_secondary_element(shape)
+                    owner.remove_secondary_element(shape, is_invisible=is_invisible)
                 # Иначе - удаляется сам owner
                 else:
-                    owner.remove_primary_element(shape)
-                    self.handle_delete(owner)
+                    owner.remove_primary_element(shape, is_invisible=is_invisible)
+                    if is_invisible:
+                        if is_invisible == 1 and not owner.invisible:
+                            owner.invisible = True
+                            self.handle_delete(owner, is_invisible=is_invisible)
+                        elif is_invisible == -1 and owner.invisible:
+                            owner.invisible = False
+                            self.handle_delete(owner, is_invisible=is_invisible)
+                    else:
+                        self.handle_delete(owner, is_invisible=is_invisible)
+                len_owners -= 1
+        len_sec_elem = len(shape.secondary_elements)
         while len(shape.secondary_elements) != 0:  # Удаляем все второстепенные элементы (не сущ без shape)
-            element = shape.secondary_elements[0]
-            shape.remove_secondary_element(element)
-            self.handle_delete(element)  # Запускаем рекурсию
+            if is_invisible and len_sec_elem == 0:
+                break
+            element = shape.secondary_elements[len_sec_elem - 1]
+            shape.remove_secondary_element(element, is_invisible=is_invisible)
+            len_sec_elem -= 1
+            self.handle_delete(element, is_invisible=is_invisible)  # Запускаем рекурсию
+        if not is_invisible:
+            self.scene().shapes_manager.remove_shape(shape)
+        else:
+            if is_invisible == 1:
+                shape.invisible = True
+            elif is_invisible == -1:
+                shape.invisible = False
 
-        self.scene().shapes_manager.remove_shape(shape)
+    def handle_move_canvas(self, scene_pos, closest_point=None):
+        self.start_move = True
+        self.start_move_point = scene_pos
+        if closest_point:
+            self.moving_point = closest_point
+        else:
+            self.saveBasePointX = self.scene().base_point[0]
+            self.saveBasePointY = self.scene().base_point[1]
+        self.change_cursor()
+
+    def handle_point_movement(self, point, logical_pos):
+        in_owners_in_secondary = [element for element in point.owner if point in element.secondary_elements]  # Наверное можно использовать connected_shapes, но к моменту проверки всего кода я уже заябалась
+
+        if logical_pos is None:  # Если точка уже переместилась (идет из handle_element_movement)
+            pass  # Стоит намеренно, чтобы не заглядывать в другие случаи
+        # Если точка в secondary_elements больше чем у 1 объекта, то она никуда не двигается
+        elif len(in_owners_in_secondary) > 1:
+            return
+        elif len(in_owners_in_secondary) == 1:  # Может перемещаться только по объекту (его линии)
+            new_point = sp.Point(logical_pos)
+            if isinstance(in_owners_in_secondary[0], Circle):
+                circle = in_owners_in_secondary[0].entity
+                center = circle.center
+                radius = circle.radius
+
+                direction_vector = new_point - center
+                direction_vector_length = sp.sqrt(direction_vector.x ** 2 + direction_vector.y ** 2)
+
+                direction_unit_vector = direction_vector / direction_vector_length
+
+                # Расчет проекции
+                projected_point = center + radius * direction_unit_vector
+                point.entity = projected_point.evalf()
+            else:
+                line = in_owners_in_secondary[0].entity
+                perpendicular_line = line.perpendicular_line(new_point)
+                intersection = line.intersection(perpendicular_line)
+                if intersection:
+                    projected_point = intersection[0]
+                    point.entity = projected_point.evalf()
+                else:
+                    point.entity = line.points[0] \
+                        if new_point.distance(line.points[0]) < new_point.distance(line.points[1]) else line.points[1]
+        else:  # Обычный случай, когда перетаскивает пользователь
+            logical_pos = QPointF(logical_pos[0], logical_pos[1])
+            delta = logical_pos - self.start_move_point
+            new_position = (self.start_move_point.x() + delta.x(), self.start_move_point.y() + delta.y())
+            new_position = self.grid_gravity(new_position)  # Применяем притяжение к сетке
+            point.entity = sp.Point(new_position[0], new_position[1])
+
+        for element in point.owner:
+            if point in element.primary_elements:  # Если она primary_elem для объекта
+                if isinstance(element, Polygon):
+                    continue
+                element.update_entity()
+                self.handle_element_movement(element)
+
+        for element in point.secondary_elements:
+            if isinstance(element, Polygon):
+                return
+            element.entity = element.proportions[point]()
+            self.handle_element_movement(element)
+
+    def handle_element_movement(self, element):
+        for second_elem in element.secondary_elements:
+            if isinstance(second_elem, Point):
+                if len(second_elem.connected_shapes) <= 1:  # Если она не точка пересечения объектов
+                    second_elem.entity = second_elem.proportions[element]()
+                else:
+                    new_coords = second_elem.proportions[element](use_nearest_intersection=True)
+                    if new_coords is None:  # Если точки пересечения нет, то все в невидимость (если этого не было)
+                        if not second_elem.invisible:
+                            self.handle_delete(second_elem, is_invisible=1)
+                        else:
+                            continue
+                    else:
+                        second_elem.entity = new_coords
+                        if second_elem.invisible:  # Если нашлись, то достаем из невидимости
+                            self.handle_delete(second_elem, is_invisible=-1)
+                        self.handle_point_movement(second_elem, None)
+                        continue
+                if isinstance(element, Circle):
+                    a = sp.Point([element.primary_elements[0].entity.x, element.primary_elements[0].entity.y])
+                    b = sp.Point([element.primary_elements[1].entity.x, element.primary_elements[1].entity.y])
+                    formula = lambda a=a, b=b, c=second_elem, a_new=element.primary_elements[0], b_new=element.primary_elements[1], is_circle=True, use_nearest_intersection=False: (
+                        update_secondary_point_coords(c, a, a_new, b, b_new, is_circle=is_circle, use_nearest_intersection=use_nearest_intersection))
+                    second_elem.set_proportion(element.primary_elements[0], formula)
+                    second_elem.set_proportion(element.primary_elements[1], formula)
+                    second_elem.set_proportion(element, formula)
+                elif len(element.primary_elements) == 2:
+                    a = sp.Point([element.primary_elements[0].entity.x, element.primary_elements[0].entity.y])
+                    b = sp.Point([element.primary_elements[1].entity.x, element.primary_elements[1].entity.y])
+                    formula = lambda a=a, b=b, c=second_elem, a_new=element.primary_elements[0], b_new=element.primary_elements[1], use_nearest_intersection=False: (
+                        update_secondary_point_coords(c, a, a_new, b, b_new, use_nearest_intersection=use_nearest_intersection))
+                    second_elem.set_proportion(element.primary_elements[0], formula)
+                    second_elem.set_proportion(element.primary_elements[1], formula)
+                    second_elem.set_proportion(element, formula)
+                elif len(element.primary_elements) == 0:
+                    # elem - по идее такое должно быть только для параллельных и т.д.
+                    # Надеемся, что у нас и дальше будет именно так, иначе - расписываем доп случаи
+                    owner_points = []
+                    for elem in element.owner:
+                        if isinstance(elem, Point):
+                            owner_points.append(elem)
+                    if len(owner_points) == 1:  # Если параллельная и так далее
+                        owner_point = owner_points[0]
+                    elif len(owner_points) == 3:  # Для биссектрисы
+                        owner_point = owner_points[1]
+
+                    a = sp.Point([owner_point.entity.x, owner_point.entity.y])
+                    formula = lambda a=a, b=None, c=second_elem, a_new=owner_point, b_new=None, line=element, use_nearest_intersection=False: (
+                        update_secondary_point_coords(c, a, a_new, b, b_new, line, use_nearest_intersection=use_nearest_intersection))
+                    second_elem.set_proportion(owner_point, formula)
+                    second_elem.set_proportion(element, formula)
+                self.handle_point_movement(second_elem, None)
+
+            else:
+                second_elem.entity = second_elem.proportions[element]()
+                self.handle_element_movement(second_elem)
+
+    def grid_gravity(self, logical_pos):
+        # Притягивание к сетке
+        if self.grid_gravity_mode:
+            gravity_coordinates = (round(logical_pos[0] / self.scene().grid_step) * self.scene().grid_step,
+                                   round(logical_pos[1] / self.scene().grid_step) * self.scene().grid_step)
+            if self.scene().shapes_manager.distance([Point(gravity_coordinates[0], gravity_coordinates[1]),
+                                                     Point(logical_pos[0],
+                                                           logical_pos[1])]) < self.scene().grid_step / 4:
+                return gravity_coordinates
+        return logical_pos
 
     def change_cursor(self):
         # Метод для изменения курсора
@@ -464,6 +679,8 @@ class CustomGraphicsView(QGraphicsView):
             # Создаём курсор из QPixmap
             cursor = QCursor(pixmap)
             self.setCursor(cursor)  # Устанавливаем курсор для QGraphicsView
+        if self.current_tool == 'Move' and self.start_move:
+            self.setCursor(Qt.PointingHandCursor)
 
     # @timeit
     def mousePressEvent(self, event):
@@ -475,13 +692,7 @@ class CustomGraphicsView(QGraphicsView):
 
         closest_point = next((shape for shape in closest_shape[2] if isinstance(shape, Point)), None)  # Ближайшая точка
 
-        if self.grid_gravity_mode:
-            gravity_coordinates = (round(logical_pos[0] / self.scene().grid_step) * self.scene().grid_step,
-                                   round(logical_pos[1] / self.scene().grid_step) * self.scene().grid_step)
-            if self.scene().shapes_manager.distance([Point(gravity_coordinates[0], gravity_coordinates[1]),
-                                                     Point(logical_pos[0],
-                                                           logical_pos[1])]) < self.scene().grid_step / 4:
-                logical_pos = gravity_coordinates
+        logical_pos = self.grid_gravity(logical_pos)
         if self.current_tool in ['Point', 'Segment', 'Polygon', 'Line', 'Ray', 'Circle', 'Midpoint',
                                  'Perpendicular Bisector', 'Angle Bisector']:
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
@@ -491,7 +702,7 @@ class CustomGraphicsView(QGraphicsView):
             elif self.current_tool == 'Distance':
                 self.handle_distance_tool(closest_point=closest_point)
             elif self.current_tool == 'Move':
-                self.handle_move_canvas(scene_pos=scene_pos)
+                self.handle_move_canvas(scene_pos=scene_pos, closest_point=closest_point)
             elif self.current_tool == 'Eraser':
                 self.change_cursor()
                 if closest_shape[0]:  # Если найдена ближайшая фигура
@@ -510,10 +721,13 @@ class CustomGraphicsView(QGraphicsView):
         # print(f"Logical coordinates: {logical_pos}")
         # print(f"scene_pos: {scene_pos.x(), scene_pos.y()}")
 
-        if self.current_tool == 'Move' and self.startMove:
-            delta = (scene_pos - self.startMovePoint)
-            self.scene().base_point[0] = self.saveBasePointX + delta.x()
-            self.scene().base_point[1] = self.saveBasePointY + delta.y()
+        if self.current_tool == 'Move' and self.start_move:
+            if self.moving_point:
+                self.handle_point_movement(self.moving_point, logical_pos)
+            else:
+                delta = (scene_pos - self.start_move_point)
+                self.scene().base_point[0] = self.saveBasePointX + delta.x()
+                self.scene().base_point[1] = self.saveBasePointY + delta.y()
         elif self.current_tool == 'Eraser' and event.buttons() == Qt.LeftButton:
             self.change_cursor()
             closest_shape = self.scene().shapes_manager.find_closest_shape(logical_pos[0], logical_pos[1],
@@ -528,7 +742,8 @@ class CustomGraphicsView(QGraphicsView):
         super().mouseReleaseEvent(event)
         if event.button() == Qt.LeftButton:
             self.unsetCursor()  # Ставит обычный курсор после разжатия мыши
-        self.startMove = False
+        self.start_move = False
+        self.moving_point = None
 
     def keyPressEvent(self, event):
         step = 10
