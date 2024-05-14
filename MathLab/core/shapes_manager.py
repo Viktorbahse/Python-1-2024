@@ -50,6 +50,8 @@ class ShapesManager:
 
         for shape_list in self.shapes.values():
             for shape in shape_list:
+                if shape.invisible:  # Если объект невидимый, то пользователь с ним никак не взаимодействует
+                    continue
                 distance = shape.distance_to_shape(x, y)  # Этот метод должен вычислять расстояние от точки до объекта
                 if distance < radius:
                     all_shapes.append(shape)

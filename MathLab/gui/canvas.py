@@ -124,17 +124,22 @@ class Canvas(QGraphicsScene):
     def draw_shapes(self):
         # Отрисовка постоянных фигур
         for shape in self.shapes_manager.shapes[Line]:
-            self.draw_lines(shape)
+            if not shape.invisible:
+                self.draw_lines(shape)
         for shape in self.shapes_manager.shapes[Segment]:
-            self.draw_segment(shape)
+            if not shape.invisible:
+                self.draw_segment(shape)
         for shape in self.shapes_manager.shapes[Ray]:
-            self.draw_ray(shape)
+            if not shape.invisible:
+                self.draw_ray(shape)
         for shape in self.shapes_manager.shapes[Circle]:
-            self.draw_circle(shape)
+            if not shape.invisible:
+                self.draw_circle(shape)
         for shape in self.shapes_manager.shapes[Function]:
             self.draw_function(shape)
         for shape in self.shapes_manager.shapes[Point]:
-            self.draw_point(shape)
+            if not shape.invisible:
+                self.draw_point(shape)
         for text in self.shapes_manager.shapes[Inf]:
             self.draw_text(text.message, *self.to_scene_coords(text.x, text.y), center_x=True, center_y=True)
 
