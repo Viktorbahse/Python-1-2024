@@ -16,6 +16,8 @@ class Shape(ABC):
         self.primary_elements = []
         # Второстепенные элементы, принадлежащие объекту (без них живет, и они удаляются вместе с объектом)
         self.secondary_elements = []
+        self.proportions = {}  # Словарь пропорций объекта, где ключи - элементы, значения - пропорции
+        self.invisible = False  # Если объект невидимый, то он будто удаляется, но без самого удаления
 
     def __del__(self):
         self.color = None
@@ -27,6 +29,7 @@ class Shape(ABC):
         self.primary_elements = None
         # Второстепенные элементы, принадлежащие объекту (без них живет, и они удаляются вместе с объектом)
         self.secondary_elements = None
+        self.proportions = None
 
     def add_point(self, point, is_primary=True):
         # Добавляется точку к объекту
@@ -42,11 +45,17 @@ class Shape(ABC):
             self.owner.append(owner)
             self.update_color()
 
-    def remove_owner(self, owner):
+    def remove_owner(self, owner, is_invisible=None):
         # Удаляет владельца
         if owner in self.owner:
-            self.owner.remove(owner)
-            self.update_color()
+            if not is_invisible:
+                self.owner.remove(owner)
+                self.update_color()
+            else:
+                if is_invisible == 1:
+                    owner.invisible = True
+                elif is_invisible == -1:
+                    owner.invisible = False
 
     def add_primary_element(self, element):
         # Добавляет основной элемент (пока не исп)
@@ -54,26 +63,54 @@ class Shape(ABC):
         if self not in element.owner:
             element.add_owner(self)  # К этому элементу устанавливается нынешний объект как владелец
 
-    def remove_primary_element(self, element):
+    def remove_primary_element(self, element, is_invisible=None):
         # Удаляет основной элемент
         if element in self.primary_elements:
-            self.primary_elements.remove(element)
-            element.remove_owner(self)
+            if not is_invisible:
+                self.primary_elements.remove(element)
+                element.remove_owner(self)
+            else:
+                if is_invisible == 1:
+                    element.invisible = True
+                elif is_invisible == -1:
+                    element.invisible = False
 
-    def add_secondary_element(self, element):
-        # Добавляет второстепенный элемент (пока не исп)
+    def add_secondary_element(self, element, formula=None):
+        # Добавляет второстепенный элемент
         self.secondary_elements.append(element)
+        if formula:
+            element.set_proportion(self, formula)
         if self not in element.owner:
             element.add_owner(self)
 
-    def remove_secondary_element(self, element):
+    def remove_secondary_element(self, element, is_invisible=None):
         # Удаляет второстепенный элемент
         if element in self.secondary_elements:
-            self.secondary_elements.remove(element)
-            element.remove_owner(self)
+            if not is_invisible:
+                self.secondary_elements.remove(element)
+                element.remove_owner(self)
+            else:
+                if is_invisible == 1:
+                    element.invisible = True
+                elif is_invisible == -1:
+                    element.invisible = False
+
+    def update_entity(self):
+        if isinstance(self.entity, sp.Segment):
+            self.entity = sp.Segment(self.primary_elements[0].entity, self.primary_elements[1].entity)
+        elif isinstance(self.entity, sp.Line):
+            self.entity = sp.Line(self.primary_elements[0].entity, self.primary_elements[1].entity)
+        elif isinstance(self.entity, sp.Circle):
+            center = self.primary_elements[0].entity
+            point_on_circle = self.primary_elements[1].entity
+            radius = center.distance(point_on_circle)
+            self.entity = sp.Circle(center, radius)
+
+    def set_proportion(self, element, proportion):
+        self.proportions[element] = proportion
 
     def distance_to_shape(self, x, y):
-        return self.entity.distance(sp.Point(float(x), float(y)))
+        return self.entity.distance(sp.Point(x, y))
 
     def projection_onto_shape(self, point):  # Проекция на объект
         return self.entity.projection(point)
@@ -126,6 +163,7 @@ class Point(Shape):
         self.line_color = [105, 105, 105, 255]
         self.radius = 5
         self.owner = owner if owner is not None else []  # Определяем список
+        self.connected_shapes = []  # Линии и окружности, на которых эта точка находиться
         self.update_color()
 
     def __del__(self):
@@ -137,10 +175,14 @@ class Point(Shape):
     def add_point(self, point, is_primary=True):
         pass
 
+    def add_connected_shape(self, shape):
+        if shape not in self.connected_shapes:
+            self.connected_shapes.append(shape)
+
     def creating_name(self):
         minimum = 0
         for i in range(26):
-            if (self.used_names[minimum] > self.used_names[i]):
+            if self.used_names[minimum] > self.used_names[i]:
                 minimum = i
         name = chr(65 + minimum)
         if self.used_names[minimum] > 0:
