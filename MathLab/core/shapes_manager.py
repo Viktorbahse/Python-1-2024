@@ -50,12 +50,14 @@ class ShapesManager:
 
         for shape_list in self.shapes.values():
             for shape in shape_list:
+                if isinstance(shape, Inf):  # Пока костыль 
+                    continue
                 if shape.invisible:  # Если объект невидимый, то пользователь с ним никак не взаимодействует
                     continue
                 distance = shape.distance_to_shape(x, y)  # Этот метод должен вычислять расстояние от точки до объекта
                 if distance < radius:
                     all_shapes.append(shape)
-                    if distance < min_distance:
+                    if distance < min_distance and not isinstance(shape, Polygon):
                         min_distance = distance
                         closest_shape = shape
 

@@ -26,7 +26,7 @@ class CustomGraphicsView(QGraphicsView):
 
         self.start_move = False
         self.start_move_point = None  # Точка начала перемещения
-        self.moving_point = None  # Перемещаемая точка
+        self.moving_shape = None  # Перемещаемый объект
 
         self.grid_gravity_mode = True
 
@@ -91,7 +91,7 @@ class CustomGraphicsView(QGraphicsView):
         line.set_color(color)  # Чтобы цвет временной линии был такой же, как у остальных
         self.scene().shapes_manager.add_temp_shape(line)
 
-    def handle_point_creation(self, logical_pos=None, point=None, closest_point=False, closest_shape=None):
+    def handle_point_creation(self, logical_pos=None, point=None, closest_point=False):
         # Добавляет точку на сцену
         if not closest_point:  # Добавляет новую только тогда, когда не найдена точка в ближайшем радиусе
             if logical_pos is not None:
@@ -535,11 +535,11 @@ class CustomGraphicsView(QGraphicsView):
             elif is_invisible == -1:
                 shape.invisible = False
 
-    def handle_move_canvas(self, scene_pos, closest_point=None):
+    def handle_move_canvas(self, scene_pos, closest_shape=None):
         self.start_move = True
         self.start_move_point = scene_pos
-        if closest_point:
-            self.moving_point = closest_point
+        if closest_shape and not isinstance(closest_shape, Polygon):
+            self.moving_shape = closest_shape
         else:
             self.saveBasePointX = self.scene().base_point[0]
             self.saveBasePointY = self.scene().base_point[1]
@@ -579,10 +579,7 @@ class CustomGraphicsView(QGraphicsView):
                     point.entity = line.points[0] \
                         if new_point.distance(line.points[0]) < new_point.distance(line.points[1]) else line.points[1]
         else:  # Обычный случай, когда перетаскивает пользователь
-            logical_pos = QPointF(logical_pos[0], logical_pos[1])
-            delta = logical_pos - self.start_move_point
-            new_position = (self.start_move_point.x() + delta.x(), self.start_move_point.y() + delta.y())
-            new_position = self.grid_gravity(new_position)  # Применяем притяжение к сетке
+            new_position = self.grid_gravity(logical_pos)  # Применяем притяжение к сетке
             point.entity = sp.Point(new_position[0], new_position[1])
 
         for element in point.owner:
@@ -597,6 +594,16 @@ class CustomGraphicsView(QGraphicsView):
                 return
             element.entity = element.proportions[point]()
             self.handle_element_movement(element)
+
+    def handle_line_movement(self, line, logical_pos):  # Под линией имеются ввиду еще и окружности
+        delta = sp.Point(*logical_pos) - sp.Point(*self.scene().to_logical_coords(
+            self.start_move_point.x(), self.start_move_point.y()))
+        if any(point.connected_shapes for point in line.primary_elements):
+            return
+        for point in line.primary_elements:
+            point.entity += delta
+            self.handle_point_movement(point, logical_pos=None)
+        self.start_move_point = QPointF(*self.scene().to_scene_coords(*logical_pos))
 
     def handle_element_movement(self, element):
         for second_elem in element.secondary_elements:
@@ -702,15 +709,24 @@ class CustomGraphicsView(QGraphicsView):
             elif self.current_tool == 'Distance':
                 self.handle_distance_tool(closest_point=closest_point)
             elif self.current_tool == 'Move':
-                self.handle_move_canvas(scene_pos=scene_pos, closest_point=closest_point)
+                if closest_point:
+                    self.handle_move_canvas(scene_pos=scene_pos, closest_shape=closest_point)
+                else:
+                    self.handle_move_canvas(scene_pos=scene_pos, closest_shape=closest_shape[0])
             elif self.current_tool == 'Eraser':
                 self.change_cursor()
-                if closest_shape[0]:  # Если найдена ближайшая фигура
+                closest_polygon = next((shape for shape in closest_shape[2] if isinstance(shape, Polygon)), None)
+                if closest_polygon:
+                    self.handle_delete(closest_polygon)
+                elif closest_point:
+                    self.handle_delete(closest_point)
+                elif closest_shape[0]:
                     self.handle_delete(closest_shape[0])
 
         self.scene().update_scene()
 
         # TODO: (Winter) find_closest_shape есть в handle_point, нужно убрать
+        # TODO: (Winter) После того, как применили Inf, closest_shape выдает его и все ломается
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -722,8 +738,11 @@ class CustomGraphicsView(QGraphicsView):
         # print(f"scene_pos: {scene_pos.x(), scene_pos.y()}")
 
         if self.current_tool == 'Move' and self.start_move:
-            if self.moving_point:
-                self.handle_point_movement(self.moving_point, logical_pos)
+            if self.moving_shape:
+                if isinstance(self.moving_shape, Point):
+                    self.handle_point_movement(self.moving_shape, logical_pos)
+                else:
+                    self.handle_line_movement(self.moving_shape, logical_pos)
             else:
                 delta = (scene_pos - self.start_move_point)
                 self.scene().base_point[0] = self.saveBasePointX + delta.x()
@@ -732,7 +751,13 @@ class CustomGraphicsView(QGraphicsView):
             self.change_cursor()
             closest_shape = self.scene().shapes_manager.find_closest_shape(logical_pos[0], logical_pos[1],
                                                                            10 / self.scene().zoom_factor)
-            if closest_shape[0]:  # Если найдена ближайшая фигура
+            closest_polygon = next((shape for shape in closest_shape[2] if isinstance(shape, Polygon)), None)
+            closest_point = next((shape for shape in closest_shape[2] if isinstance(shape, Point)), None)
+            if closest_polygon:
+                self.handle_delete(closest_polygon)
+            elif closest_point:
+                self.handle_delete(closest_point)
+            elif closest_shape[0]:
                 self.handle_delete(closest_shape[0])
 
         self.initiate_temp_shape_drawing(logical_pos)
@@ -743,7 +768,7 @@ class CustomGraphicsView(QGraphicsView):
         if event.button() == Qt.LeftButton:
             self.unsetCursor()  # Ставит обычный курсор после разжатия мыши
         self.start_move = False
-        self.moving_point = None
+        self.moving_shape = None
 
     def keyPressEvent(self, event):
         step = 10
