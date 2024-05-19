@@ -9,6 +9,8 @@ from gui.dock_tools import DockTools
 from gui.timing_widget import TimingWidget
 from tests.timing import *
 from gui.uploading_downloading_files import *
+from gui.Inter import *
+
 
 default_size = [1200, 800]
 
@@ -60,6 +62,10 @@ class MainWindow(QMainWindow):
         fileMenu = menubar.addMenu('Файл')
         editMenu = menubar.addMenu('Редактировать')
 
+        Authorization = QAction('Войти', self)
+        Authorization.triggered.connect(self.authorization)
+        menubar.addAction(Authorization)
+
         serverAction = QAction('Сервер', self)
         serverAction.triggered.connect(self.open_uploading_downloading_files)  # Связываем действие с методом
         menubar.addAction(serverAction)
@@ -76,6 +82,13 @@ class MainWindow(QMainWindow):
         self.timing_widget.resize(200, 20)
         TIMING_SIGNAL.time_updated.connect(self.timing_widget.setText)
 
+    def authorization(self):
+        form = Interface(self)
+        # Перемещаем и изменяем размер нового экземпляра
+        form.move(400, 300)
+        form.setWindowFlags(Qt.Window)
+        # Отображаем новый экземпляр
+        form.show()
     def open_uploading_downloading_files(self):
         if not self.uploading_downloading_files:
             self.uploading_downloading_files = UploadingDownloadingFiles()  # Создаем окно только, если оно еще не создано

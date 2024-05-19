@@ -63,4 +63,4 @@ def upload_file():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)  # Чтобы был не локальный вместо этого вроде app.run(host='0.0.0.0', port=5000) нужно написать
+    app.run(host='0.0.0.0', port=8080, debug=True)  # Чтобы был не локальный вместо этого вроде app.run(host='0.0.0.0', port=5000) нужно написать

@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt
 import requests
 import datetime
 
-SERVER_URL = 'http://localhost:5000'  # И тут вроде надо изменить, чтобы не локально было
+SERVER_URL = 'http://3.138.69.95:5000'  # И тут вроде надо изменить, чтобы не локально было
 
 
 class UploadingDownloadingFiles(QWidget):
