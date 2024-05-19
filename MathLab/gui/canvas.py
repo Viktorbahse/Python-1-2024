@@ -191,28 +191,36 @@ class Canvas(QGraphicsScene):
                     x, y = self.to_scene_coords(x_end, func.evaluate(x_end))
                     path.lineTo(QPointF(x, y))
                 elif len(bad_points) == 0:
-                    x_values = np.linspace(float(x_start), float(x_end), 300)
+                    drawing_status = False
+                    x_values = np.linspace(float(x_start), float(x_end), 400)
                     y_values = func.f(x_values)
-                    x, y = self.to_scene_coords(x_values[0], y_values[0])
-                    path.moveTo(QPointF(x, y))
-                    for i in range(1, len(x_values)):
-                        x, y = self.to_scene_coords(x_values[i], y_values[i])
-                        path.lineTo(QPointF(x, y))
+                    for i in range(len(x_values)):
+                        if math.isnan(y_values[i]):
+                            drawing_status = False
+                        else:
+                            if not drawing_status:
+                                x, y = self.to_scene_coords(x_values[i], y_values[i])
+                                path.moveTo(QPointF(x, y))
+                                drawing_status = True
+                            else:
+                                x, y = self.to_scene_coords(x_values[i], y_values[i])
+                                path.lineTo(QPointF(x, y))
                 else:
                     bad_points = [x_start] + bad_points + [x_end]
                     for i in range(len(bad_points) - 1):
                         if func.is_defined((bad_points[i] + bad_points[i + 1]) / 2):
-                            accuracy = 200
+                            accuracy = 100
                             if len(bad_points) > 5:
                                 accuracy = 50
                             x_values = np.linspace(float(bad_points[i] + (bad_points[i + 1] - bad_points[i]) / 200000),
                                                    float(bad_points[i + 1] - (
                                                            bad_points[i + 1] - bad_points[i]) / 200000), accuracy)
                             y_values = func.f(x_values)
+
                             x, y = self.to_scene_coords(x_values[0], y_values[0])
                             path.moveTo(QPointF(x, y))
-                            for i in range(1, len(x_values)):
-                                x, y = self.to_scene_coords(x_values[i], y_values[i])
+                            for j in range(1, len(x_values)):
+                                x, y = self.to_scene_coords(x_values[j], y_values[j])
                                 path.lineTo(QPointF(x, y))
 
         path_item = QGraphicsPathItem()
