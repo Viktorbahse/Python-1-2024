@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction, QLabel
 from PyQt5.QtCore import Qt
 from gui.custom_graphics_view import CustomGraphicsView
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, \
+    QAction
 from PyQt5.QtCore import Qt, QSize, QTimer
 from gui.custom_graphics_view import CustomGraphicsView
 from gui.canvas import Canvas
@@ -9,7 +10,8 @@ from gui.dock_tools import DockTools
 from gui.timing_widget import TimingWidget
 from tests.timing import *
 from gui.uploading_downloading_files import *
-from gui.Inter import *
+
+# from gui.Inter import *
 
 
 default_size = [1200, 800]
@@ -23,6 +25,8 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
 
         self.uploading_downloading_files = None
+        self.authorization = None
+        self.registration = None
         self.display_timing = False  # Включает показ времени, за которое работает та или иная функция
 
         self.initUI()
@@ -63,7 +67,7 @@ class MainWindow(QMainWindow):
         editMenu = menubar.addMenu('Редактировать')
 
         Authorization = QAction('Войти', self)
-        Authorization.triggered.connect(self.authorization)
+        Authorization.triggered.connect(self.open_authorization)
         menubar.addAction(Authorization)
 
         serverAction = QAction('Сервер', self)
@@ -82,13 +86,17 @@ class MainWindow(QMainWindow):
         self.timing_widget.resize(200, 20)
         TIMING_SIGNAL.time_updated.connect(self.timing_widget.setText)
 
-    def authorization(self):
-        form = Interface(self)
-        # Перемещаем и изменяем размер нового экземпляра
-        form.move(400, 300)
-        form.setWindowFlags(Qt.Window)
-        # Отображаем новый экземпляр
-        form.show()
+    def open_reg(self):
+        if not self.registration:
+            self.registration=Registration_interface()
+        self.registration.show()
+    def open_authorization(self):
+        if not self.authorization:
+            self.authorization = Log_in_interface()
+            self.authorization.log_in_ui.pushButton_sign_up.clicked.connect(self.open_reg)
+            self.authorization.hide()
+        self.authorization.show()
+
     def open_uploading_downloading_files(self):
         if not self.uploading_downloading_files:
             self.uploading_downloading_files = UploadingDownloadingFiles()  # Создаем окно только, если оно еще не создано
