@@ -4,59 +4,63 @@ from PyQt5.QtCore import QSize, Qt, QThread
 from PyQt5 import QtCore
 import requests
 import datetime
-import sqlite3
+import socket
+import pickle
 
 SERVER_URL = 'http://192.168.0.105:8080'  # И тут вроде надо изменить, чтобы не локально было
-
-
-def login(login, passw, signal):
-    db_path = 'gui/handler/users.db'
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-    # tret="table"
-    # cur.execute(f'SELECT name FROM sqlite_master WHERE type="{tret}";')
-    # # Получить результат запроса
-    # table_names = [table[0] for table in cur.fetchall()]
-    # # Вывести имена таблиц
-    # print(table_names)
-    cur.execute(f'SELECT * FROM users WHERE name="{login}";')
-    value = cur.fetchall()
-
-    if value != [] and value[0][2] == passw:
-        signal.emit('Успеспешная авторизация!')
-    else:
-        signal.emit('Проверти правильность ввода данных!')
-
-    cur.close()
-    con.close()
-
-
-def register(login, passw, signal):
-    db_path = 'gui/handler/users.db'
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-    cur.execute(f'SELECT * FROM users WHERE name="{login}";')
-    value = cur.fetchall()
-
-    if value != []:
-        signal.emit('Такой ник уже есть!')
-    elif value == []:
-        cur.execute(f"INSERT INTO users (name, passwor) VALUES ('{login}', '{passw}')")
-        signal.emit('Успешная регистрация')
-        con.commit()
-
-    cur.close()
-    con.close()
 
 
 class CheckThread(QThread):
     mysignal = QtCore.pyqtSignal(str)
 
-    def thr_login(self, name, passw):
-        login(name, passw, self.mysignal)
+    # def thr_login(self, name, passw):
+    #     login(name, passw, self.mysignal)
+    #
+    # def thr_register(self, name, passw):
+    #     register(name, passw, self.mysignal)
 
     def thr_register(self, name, passw):
-        register(name, passw, self.mysignal)
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('localhost', 9999))
+        func_name = "register"
+        strings = [name, passw]
+
+        # Сериализация данных
+        data = pickle.dumps((func_name, strings))
+
+        # Отправка данных на сервер
+        client_socket.send(data)
+
+        # Получение результата от сервера
+        result = client_socket.recv(4096)
+
+        # Десериализация результата
+        result = pickle.loads(result)
+
+        # Закрытие соединения с сервером
+        client_socket.close()
+        self.mysignal.emit(result)
+    def thr_login(self, name, passw):
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('localhost', 9999))
+        func_name = "login"
+        strings = [name, passw]
+
+        # Сериализация данных
+        data = pickle.dumps((func_name, strings))
+
+        # Отправка данных на сервер
+        client_socket.send(data)
+
+        # Получение результата от сервера
+        result = client_socket.recv(4096)
+
+        # Десериализация результата
+        result = pickle.loads(result)
+
+        # Закрытие соединения с сервером
+        client_socket.close()
+        self.mysignal.emit(result)
 
 
 class Registration_interface(QWidget):

@@ -1,5 +1,8 @@
 from flask import Flask, request, send_from_directory, jsonify, abort
 import os
+import sqlite3
+import socket
+import pickle
 
 # Путь, где на сервере хранятся файлы
 uploads_dir = os.path.join('uploads')
@@ -11,6 +14,48 @@ if not os.path.exists(uploads_dir):
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
+def login(data):
+    db_path = 'handler/users.db'
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    # tret="table"
+    # cur.execute(f'SELECT name FROM sqlite_master WHERE type="{tret}";')
+    # # Получить результат запроса
+    # table_names = [table[0] for table in cur.fetchall()]
+    # # Вывести имена таблиц
+    # print(table_names)
+    cur.execute(f'SELECT * FROM users WHERE name="{data[0]}";')
+    value = cur.fetchall()
+
+    if value != [] and value[0][2] == data[1]:
+        cur.close()
+        con.close()
+        return 'Успеспешная авторизация!'
+    else:
+        cur.close()
+        con.close()
+        return 'Проверти правильность ввода данных!'
+
+
+def register(data):
+    db_path = 'handler/users.db'
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE name="{data[0]}";')
+    value = cur.fetchall()
+
+    if value != []:
+        cur.close()
+        con.close()
+        return 'Такой ник уже есть!'
+    elif value == []:
+        cur.execute(f"INSERT INTO users (name, passwor) VALUES ('{data[0]}', '{data[1]}')")
+        con.commit()
+        cur.close()
+        con.close()
+        return 'Успешная регистрация'
 
 
 # Это наш запрос. Можно в поиске http://127.0.0.1:5000/list и получить ответ
@@ -63,4 +108,34 @@ def upload_file():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, debug=True)  # Чтобы был не локальный вместо этого вроде app.run(host='0.0.0.0', port=5000) нужно написать
+    # app.run(host='0.0.0.0', port=8080, debug=True)  # Чтобы был не локальный вместо этого вроде app.run(host='0.0.0.0', port=5000) нужно написать
+    # Создание сокета
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(('localhost', 9999))
+    server_socket.listen(5)
+
+    print("Server is listening...")
+
+    while True:
+        # Принимаем входящее соединение
+        client_socket, address = server_socket.accept()
+        print(f"Connection from {address} has been established!")
+
+        # Получаем данные от клиента
+        data = client_socket.recv(4096)
+
+        # Десериализуем данные, чтобы получить имя функции и массив строк
+        func_name, strings = pickle.loads(data)
+
+        # Вызываем соответствующую функцию и получаем результат
+        if func_name == "login":
+            result = login(strings)
+        elif func_name == "register":
+            result = register(strings)
+        else:
+            result = "Invalid function name: " + func_name
+        # Отправляем результат клиенту
+        client_socket.send(pickle.dumps(result))
+
+        # Закрываем соединение с клиентом
+        client_socket.close()
