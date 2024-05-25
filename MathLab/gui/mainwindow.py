@@ -1,4 +1,5 @@
 import json
+from MathLab import game_rc
 
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction
 from PyQt5.QtCore import Qt
@@ -18,6 +19,7 @@ default_size = [1200, 800]
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.runGame = False
         self.fileName = None
         self.setWindowTitle("MathLab [*]")
         self.setMinimumSize(QSize(600, 400))
@@ -25,6 +27,12 @@ class MainWindow(QMainWindow):
         self.initUI()
         self.initMenu()
         self.scene.shapes_manager.comm.shapesChanged.connect(self.onSceneChanged)
+
+    def onTaskSelected(self, dlg):
+        filename = ":/resources/" + dlg.currentFileName + ".json"
+        print("Task Selected", filename)
+        self.loadFile(filename)
+        self.runGame = True
 
     def closeEvent(self, event):
         if self.confirmContinue():
@@ -39,14 +47,25 @@ class MainWindow(QMainWindow):
         if not self.confirmContinue():
             return
         dlg = DlgSelectMode()
+        dlg.taskSelected.connect(self.onTaskSelected)
+
         if dlg.exec():
             self.modeGame = dlg.modeGame
             print("selected mode is ", self.modeGame)
+
         else:
             print("reject")
 
+    def checkWin(self):
+        return True
+
     def onSceneChanged(self):
         self.setWindowModified(True)
+        if self.runGame == True:
+            if self.checkWin():
+                QMessageBox.information(self, "MathLab", "Победа ефыл ттт решена")
+        pass
+
     def resizeEvent(self, event):
         new_size = event.size()  # получаем новый размер окна
         self.scene.setSceneRect(0, 0, new_size.width() - self.dockTools.width() - 2, new_size.height() - 2)
@@ -117,21 +136,26 @@ class MainWindow(QMainWindow):
             return True
         return False
 
+    def loadFile(self, fileName):
+        inFile = QFile(fileName)
+        if not inFile.open(QFile.ReadOnly | QFile.Text):
+            QMessageBox.warning(self, "MathLab", "Не могу открыть файл %s\n%s" % (fileName, inFile.errorString()))
+            return
+        ba = inFile.readAll()
+        inFile.close()
+        root = json.loads(str(ba, 'utf-8'))
+        self.readRoot(root)
+        self.fileName = fileName
+        self.setWindowModified(False)
+        self.setWindowTitle("MathLab %s [*]" % self.fileName)
+
     def open(self):
         if not self.confirmContinue():
             return
         fileName, _ = QFileDialog.getOpenFileName(self, "Открыть файл MathLab", "", "*.json;;*.*")
         if fileName:
-            inFile = QFile(fileName)
-            if not inFile.open(QFile.ReadOnly | QFile.Text):
-                QMessageBox.warning(self, "MathLab", "Не могу открыть файл %s\n%s" % (fileName, inFile.errorString()))
-                return
-            with open(fileName, 'r', encoding='utf-8') as f:
-                root = json.load(f)
-                self.readRoot(root)
-                self.fileName = fileName
-                self.setWindowModified(False)
-                self.setWindowTitle("MathLab %s [*]" % self.fileName)
+            self.loadFile(fileName)
+
 
     def readRoot(self, root):
         self.scene.base_point = root['saved_params']['base_point']
