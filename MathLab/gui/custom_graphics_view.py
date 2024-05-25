@@ -4,6 +4,7 @@ from PyQt5.QtGui import QKeySequence, QCursor, QPixmap
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 from core.geometry_utils import *
+from core.redo_undo import *
 from tests.timing import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
@@ -17,6 +18,10 @@ class CustomGraphicsView(QGraphicsView):
         self.max_zoom_factor = 1e+16
         self.min_zoom_factor = 1e-11
         self.zoom_multiplier = 1.05
+
+        self.command_stack = []  # Список команд
+        self.current_index = -1
+        self.shapes_before = []
 
         self.current_tool = 'Move'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
@@ -96,6 +101,7 @@ class CustomGraphicsView(QGraphicsView):
         if not closest_point:  # Добавляет новую только тогда, когда не найдена точка в ближайшем радиусе
             if logical_pos is not None:
                 point = Point(logical_pos[0], logical_pos[1])
+                self.execute_command(CreateShapeCommand(self, [point], is_deepcopy=True))
             else:
                 logical_pos = [None, None]
                 logical_pos[0], logical_pos[1] = point.entity
@@ -492,7 +498,8 @@ class CustomGraphicsView(QGraphicsView):
 
     def handle_delete(self, shape, is_invisible=None):
         # Метод для корректного удаления объектов. Также достает и убирает объекты в невидимость
-
+        if shape.primary_elements is None:  # Для undo\redo
+            return
         for element in shape.primary_elements:  # Сначала удаляем основные элементы (продолжают жить без shape)
             element.remove_owner(shape, is_invisible=is_invisible)
 
@@ -535,9 +542,8 @@ class CustomGraphicsView(QGraphicsView):
             elif is_invisible == -1:
                 shape.invisible = False
 
-    def handle_move_canvas(self, scene_pos, closest_shape=None):
+    def handle_move_canvas(self, closest_shape=None):
         self.start_move = True
-        self.start_move_point = scene_pos
         if closest_shape and not isinstance(closest_shape, Polygon):
             self.moving_shape = closest_shape
         else:
@@ -595,15 +601,16 @@ class CustomGraphicsView(QGraphicsView):
             element.entity = element.proportions[point]()
             self.handle_element_movement(element)
 
-    def handle_line_movement(self, line, logical_pos):  # Под линией имеются ввиду еще и окружности
-        delta = sp.Point(*logical_pos) - sp.Point(*self.scene().to_logical_coords(
-            self.start_move_point.x(), self.start_move_point.y()))
+    def handle_line_movement(self, line, logical_pos=None, delta=None):  # Под линией имеются ввиду еще и окружности
+        if delta is None:
+            delta = sp.Point(*logical_pos) - sp.Point(*self.line_start_move_point)
         if any(point.connected_shapes for point in line.primary_elements):
             return
         for point in line.primary_elements:
             point.entity += delta
             self.handle_point_movement(point, logical_pos=None)
-        self.start_move_point = QPointF(*self.scene().to_scene_coords(*logical_pos))
+        if logical_pos is not None:
+            self.line_start_move_point = logical_pos
 
     def handle_element_movement(self, element):
         for second_elem in element.secondary_elements:
@@ -689,6 +696,35 @@ class CustomGraphicsView(QGraphicsView):
         if self.current_tool == 'Move' and self.start_move:
             self.setCursor(Qt.PointingHandCursor)
 
+    def execute_command(self, command, execute=False):
+        # Добавление новой команды
+        # Удаляем все команды, следующие за текущим индексом
+        del self.command_stack[self.current_index + 1:]
+        if execute:
+            command.execute()
+
+        self.command_stack.append(command)
+        self.current_index += 1
+        if len(self.command_stack) > 10:
+            del self.command_stack[0]
+            self.current_index -= 1
+
+    def undo_last_command(self):
+        # Отменяет последнюю команду
+        if self.current_index >= 0:
+            last_command = self.command_stack[self.current_index]
+            last_command.undo()
+            self.current_index -= 1
+            self.scene().update_scene()
+
+    def redo_last_command(self):
+        # Возвращаем команду
+        if self.current_index < len(self.command_stack) - 1:
+            self.current_index += 1
+            next_command = self.command_stack[self.current_index]
+            next_command.execute()
+            self.scene().update_scene()
+
     # @timeit
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
@@ -702,20 +738,57 @@ class CustomGraphicsView(QGraphicsView):
         logical_pos = self.grid_gravity(logical_pos)
         if self.current_tool in ['Point', 'Segment', 'Polygon', 'Line', 'Ray', 'Circle', 'Midpoint',
                                  'Perpendicular Bisector', 'Angle Bisector']:
+            temp_point_before = self.temp_point
+            temp_point1_before = self.temp_point1
+            temp_line_before = self.temp_line
+            polygon_points_before = self.polygon_points
+
             self.drawing_tools[self.current_tool](logical_pos=logical_pos, closest_point=closest_point)
+
+            if ((self.temp_point is None and temp_point_before != self.temp_point) or
+                    (self.temp_point1 is None and temp_point1_before != self.temp_point1) or
+                    (self.temp_line is None and temp_line_before != self.temp_line) or
+                    (self.polygon_points is None and polygon_points_before != self.polygon_points)):
+                shapes_after = [shape for shapes_list in self.scene().shapes_manager.shapes.values() for shape in shapes_list]
+                added_shapes = [shape for shape in shapes_after if shape not in self.shapes_before]
+                self.execute_command(CreateShapeCommand(self, added_shapes))
+            if self.temp_point is None and self.temp_point1 is None and self.temp_line is None and self.polygon_points is None:
+                self.shapes_before = [shape for shapes_list in self.scene().shapes_manager.shapes.values() for shape in shapes_list]
         else:
             if self.current_tool in ['Parallel Line', 'Perpendicular Line']:
+                temp_point_before = self.temp_point
+                temp_point1_before = self.temp_point1
+                temp_line_before = self.temp_line
+                polygon_points_before = self.polygon_points
+
                 self.drawing_tools[self.current_tool](logical_pos, closest_shape)
+
+                if ((self.temp_point is None and temp_point_before != self.temp_point) or
+                        (self.temp_point1 is None and temp_point1_before != self.temp_point1) or
+                        (self.temp_line is None and temp_line_before != self.temp_line) or
+                        (self.polygon_points is None and polygon_points_before != self.polygon_points)):
+                    shapes_after = [shape for shapes_list in self.scene().shapes_manager.shapes.values() for shape in
+                                    shapes_list]
+                    added_shapes = [shape for shape in shapes_after if shape not in self.shapes_before]
+                    self.execute_command(CreateShapeCommand(self, added_shapes))
+                if self.temp_point is None and self.temp_point1 is None and self.temp_line is None and self.polygon_points is None:
+                    self.shapes_before = [shape for shapes_list in self.scene().shapes_manager.shapes.values() for shape
+                                          in shapes_list]
             elif self.current_tool == 'Distance':
                 self.handle_distance_tool(closest_point=closest_point)
             elif self.current_tool == 'Move':
+                self.start_move_point = scene_pos
+                self.line_start_move_point = logical_pos
                 if closest_point:
-                    self.handle_move_canvas(scene_pos=scene_pos, closest_shape=closest_point)
+                    self.handle_move_canvas(closest_shape=closest_point)
                 else:
-                    self.handle_move_canvas(scene_pos=scene_pos, closest_shape=closest_shape[0])
+                    self.handle_move_canvas(closest_shape=closest_shape[0])
             elif self.current_tool == 'Eraser':
                 self.change_cursor()
                 closest_polygon = next((shape for shape in closest_shape[2] if isinstance(shape, Polygon)), None)
+                self.shapes_before = [shape for shapes_list in self.scene().shapes_manager.shapes.values() for shape in
+                                      shapes_list]
+
                 if closest_polygon:
                     self.handle_delete(closest_polygon)
                 elif closest_point:
@@ -733,9 +806,6 @@ class CustomGraphicsView(QGraphicsView):
         scene_pos = self.mapToScene(event.pos())  # Преобразует координаты курсора в координаты сцены
         logical_pos = self.scene().to_logical_coords(scene_pos.x(),
                                                      scene_pos.y())  # Преобразует координаты сцены в логические координаты
-
-        # print(f"Logical coordinates: {logical_pos}")
-        # print(f"scene_pos: {scene_pos.x(), scene_pos.y()}")
 
         if self.current_tool == 'Move' and self.start_move:
             if self.moving_shape:
@@ -767,8 +837,19 @@ class CustomGraphicsView(QGraphicsView):
         super().mouseReleaseEvent(event)
         if event.button() == Qt.LeftButton:
             self.unsetCursor()  # Ставит обычный курсор после разжатия мыши
+            if self.current_tool == "Eraser":
+                shapes_after = [shape for shapes_list in self.scene().shapes_manager.shapes.values() for shape in
+                                shapes_list]
+                added_shapes = [shape for shape in shapes_after if shape not in self.shapes_before]
+                self.execute_command(DeleteShapeCommand(self, added_shapes))
+
+        if self.moving_shape is not None:
+            scene_pos = self.mapToScene(event.pos())
+            new_pos = self.scene().to_logical_coords(scene_pos.x(), scene_pos.y())
+            old_pos = self.scene().to_logical_coords(self.start_move_point.x(), self.start_move_point.y())
+            self.execute_command(MoveShapeCommand(self, self.moving_shape, old_pos, new_pos))
+            self.moving_shape = None
         self.start_move = False
-        self.moving_shape = None
 
     def keyPressEvent(self, event):
         step = 10
@@ -806,7 +887,7 @@ class CustomGraphicsView(QGraphicsView):
             self.current_tool = 'Point'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_H:
             self.current_tool = 'Segment'
-        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Y:
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_X:
             self.current_tool = 'Polygon'
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_P:
             self.current_tool = 'Parallel Line'
@@ -820,5 +901,9 @@ class CustomGraphicsView(QGraphicsView):
             self.current_tool = 'Angle Bisector'
         elif event.key() == Qt.Key_Delete:
             self.current_tool = 'Eraser'
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Z:
+            self.undo_last_command()
+        elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Y:
+            self.redo_last_command()
         self.scene().update_scene()
         super().keyPressEvent(event)

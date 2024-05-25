@@ -8,6 +8,7 @@ from gui.canvas import Canvas
 from gui.dock_tools import DockTools
 from gui.timing_widget import TimingWidget
 from tests.timing import *
+from gui.uploading_downloading_files import *
 
 default_size = [1200, 800]
 
@@ -19,6 +20,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(QSize(600, 400))
         self.setGeometry(100, 100, 1200, 800)
 
+        self.uploading_downloading_files = None
         self.display_timing = False  # Включает показ времени, за которое работает та или иная функция
 
         self.initUI()
@@ -58,6 +60,10 @@ class MainWindow(QMainWindow):
         fileMenu = menubar.addMenu('Файл')
         editMenu = menubar.addMenu('Редактировать')
 
+        serverAction = QAction('Сервер', self)
+        serverAction.triggered.connect(self.open_uploading_downloading_files)  # Связываем действие с методом
+        menubar.addAction(serverAction)
+
         exitAction = QAction('Выход', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.triggered.connect(self.close)
@@ -69,6 +75,11 @@ class MainWindow(QMainWindow):
         self.timing_widget.move(230, 45)
         self.timing_widget.resize(200, 20)
         TIMING_SIGNAL.time_updated.connect(self.timing_widget.setText)
+
+    def open_uploading_downloading_files(self):
+        if not self.uploading_downloading_files:
+            self.uploading_downloading_files = UploadingDownloadingFiles()  # Создаем окно только, если оно еще не создано
+        self.uploading_downloading_files.show()
 
     def onAddEdFunc(self):
         print("onAddEdFunc")

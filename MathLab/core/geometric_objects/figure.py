@@ -23,6 +23,12 @@ class Circle(Shape):
         super().__del__()
         self.points = None
 
+    def get_info(self):
+        info = super().get_info()
+        info['points'] = self.points
+        info['point_color'] = self.point_color
+        return info
+
     def add_point(self, point, is_primary=True):
         super().add_point(point, is_primary=is_primary)
         if len(self.points) == 2:
@@ -74,6 +80,13 @@ class Polygon(Shape):
     def __del__(self):
         super().__del__()
         self.points = None
+
+    def get_info(self):
+        info = super().get_info()
+        info['points'] = self.points
+        info['point_color'] = self.point_color
+        info['line_color'] = self.line_color
+        return info
 
     def distance_to_shape(self, x, y):
         point_to_check = sp.Point(x, y)

@@ -31,6 +31,19 @@ class Shape(ABC):
         self.secondary_elements = None
         self.proportions = None
 
+    def get_info(self):
+        info = {
+            'color': self.color,
+            'entity': self.entity,
+            'width': self.width,
+            'owner': self.owner,
+            'primary_elements': self.primary_elements,
+            'secondary_elements': self.secondary_elements,
+            'proportions': self.proportions,
+            'invisible': self.invisible
+        }
+        return info
+
     def add_point(self, point, is_primary=True):
         # Добавляется точку к объекту
         self.points.append(point)
@@ -172,6 +185,15 @@ class Point(Shape):
         if self.name:
             print(self.name)
 
+    def get_info(self):
+        info = super().get_info()
+        info['name'] = self.name
+        info['point_color'] = self.point_color
+        info['line_color'] = self.line_color
+        info['radius'] = self.radius
+        info['connected_shapes'] = self.connected_shapes
+        return info
+
     def add_point(self, point, is_primary=True):
         pass
 
@@ -212,6 +234,12 @@ class Segment(Shape):
         super().__del__()
         self.points = None
 
+    def get_info(self):
+        info = super().get_info()
+        info['points'] = self.points
+        info['point_color'] = self.point_color
+        return info
+
     def add_point(self, point, is_primary=True):
         super().add_point(point=point, is_primary=is_primary)
         if len(self.points) == 2:
@@ -240,6 +268,12 @@ class Line(Shape):
         super().__del__()
         self.points = None
 
+    def get_info(self):
+        info = super().get_info()
+        info['points'] = self.points
+        info['point_color'] = self.point_color
+        return info
+
     def add_point(self, point, is_primary=True):
         super().add_point(point=point, is_primary=is_primary)
         if len(self.points) == 2:
@@ -267,6 +301,12 @@ class Ray(Shape):
     def __del__(self):
         super().__del__()
         self.points = None
+
+    def get_info(self):
+        info = super().get_info()
+        info['points'] = self.points
+        info['point_color'] = self.point_color
+        return info
 
     def add_point(self, point, is_primary=True):
         super().add_point(point=point, is_primary=is_primary)
