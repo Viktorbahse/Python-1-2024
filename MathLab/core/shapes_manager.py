@@ -16,7 +16,7 @@ class ShapesManager:
 
     def add_shape(self, shape):
         if type(shape) == Point:
-            shape.creating_name()
+            shape.creating_name(self.shapes[Point])
         self.shapes[type(shape)].append(shape)
 
     def remove_shape(self, shape):

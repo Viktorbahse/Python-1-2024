@@ -162,7 +162,6 @@ class Inf:
         self.x = x
         self.y = y
         self.message = message
-        # TODO: (Vik76) Правильно доделай, тогда я смогу удалять и сообщения
 
 
 class Point(Shape):
@@ -201,16 +200,31 @@ class Point(Shape):
         if shape not in self.connected_shapes:
             self.connected_shapes.append(shape)
 
-    def creating_name(self):
-        minimum = 0
-        for i in range(26):
-            if self.used_names[minimum] > self.used_names[i]:
-                minimum = i
-        name = chr(65 + minimum)
-        if self.used_names[minimum] > 0:
-            name += str(self.used_names[minimum])
-        self.set_name(name)
-        self.used_names[minimum] += 1
+    def creating_name(self, points):
+        def next_name(previous_name):
+            if previous_name[0] == 'Z':
+                num = 1
+                if len(previous_name) > 1:
+                    num = int(previous_name[1:]) + 1
+                return 'A' + str(num)
+            return chr(ord(previous_name[0]) + 1) + previous_name[1:]
+
+        point_names = [point.name for point in points]
+        if not point_names:
+            self.set_name('A')
+            return
+
+        sorted_point_names = sorted(point_names, key=lambda x: (int(x[1:]) if len(x) > 1 else 0, x[0]))
+        if sorted_point_names[0] != 'A':
+            self.set_name('A')
+            return
+        for i in range(1, len(sorted_point_names)):
+            next_point_name = next_name(sorted_point_names[i - 1])
+            if next_point_name != sorted_point_names[i]:
+                self.set_name(next_point_name)
+                return
+
+        self.set_name(next_name(sorted_point_names[-1]))
 
     def set_name(self, new_name):
         self.name = new_name
