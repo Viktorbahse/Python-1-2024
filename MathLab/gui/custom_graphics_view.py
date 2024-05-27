@@ -9,6 +9,7 @@ from tests.timing import *
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor
 import sympy as sp
+import copy
 import time
 
 
@@ -22,6 +23,7 @@ class CustomGraphicsView(QGraphicsView):
         self.command_stack = []  # Список команд
         self.current_index = -1
         self.shapes_before = []
+        self.deleted_shapes = {}
 
         self.current_tool = 'Move'  # Текущий инструмент
         self.polygon_points = None  # Список точек для текущего рисуемого многоугольника.
@@ -67,9 +69,8 @@ class CustomGraphicsView(QGraphicsView):
                     sp.Line(self.temp_point.entity, sp.Point(logical_pos[0], logical_pos[1]))).perpendicular_line(
                     self.temp_point.entity.midpoint(sp.Point(logical_pos[0], logical_pos[1])))
             elif self.current_tool == 'Angle Bisector' and self.temp_point1 is not None:
-                pass
-                # temp_shape = Line()
-                # temp_shape.entity = bisector(self.temp_point.entity, self.temp_point1.entity, sp.Point(logical_pos[0], logical_pos[1]))
+                temp_shape = Line(color=temp_color)
+                temp_shape.entity = bisector(self.temp_point.entity, self.temp_point1.entity, sp.Point(logical_pos[0], logical_pos[1]))
             elif self.current_tool == 'Segment':
                 temp_shape = Segment([self.temp_point, Point(logical_pos[0], logical_pos[1])], color=temp_color)
             elif self.current_tool == 'Line':
@@ -89,7 +90,7 @@ class CustomGraphicsView(QGraphicsView):
         # Добавляет временную линию в shapes_manager для отрисовки. Принимает точки класса Point.
         self.scene().shapes_manager.clear_temp_shapes()
         line = Line()
-        if not isinstance(self.temp_line, sp.Line2D):  # Что-то страшное происходило в перпендикулярах, там трогать не стала
+        if not isinstance(self.temp_line, sp.Line2D):
             line.entity = self.temp_line.entity.parallel_line(point)
         else:
             line.entity = self.temp_line.parallel_line(point)
@@ -101,7 +102,7 @@ class CustomGraphicsView(QGraphicsView):
         if not closest_point:  # Добавляет новую только тогда, когда не найдена точка в ближайшем радиусе
             if logical_pos is not None:
                 point = Point(logical_pos[0], logical_pos[1])
-                self.execute_command(CreateShapeCommand(self, [point], is_deepcopy=True))
+                self.execute_command(CreateShapeCommand(self, [point]))
             else:
                 logical_pos = [None, None]
                 logical_pos[0], logical_pos[1] = point.entity
@@ -255,8 +256,6 @@ class CustomGraphicsView(QGraphicsView):
             self.current_line.set_proportion(self.primordial_shape, formula)
             self.current_line.set_proportion(final_point, formula)
 
-            #self.current_line.entity = self.temp_line.parallel_line(
-            #    sp.Point(final_point.entity.x, final_point.entity.y))
             self.scene().shapes_manager.clear_temp_shapes()
             self.scene().shapes_manager.add_shape(self.current_line)
             self.temp_point = None
@@ -273,8 +272,6 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_line.set_proportion(self.temp_line, formula)
                 self.current_line.set_proportion(self.temp_point, formula)
 
-                #self.current_line.entity = self.temp_line.entity.perpendicular_line(
-                    #sp.Point(self.temp_point.entity.x, self.temp_point.entity.y))
                 self.scene().shapes_manager.clear_temp_shapes()
                 self.scene().shapes_manager.add_shape(self.current_line)
                 self.temp_point = None
@@ -311,8 +308,6 @@ class CustomGraphicsView(QGraphicsView):
             self.current_line.set_proportion(self.temp_line, formula)
             self.current_line.set_proportion(final_point, formula)
 
-            #self.current_line.entity = self.temp_line.parallel_line(
-            #    sp.Point(final_point.entity.x, final_point.entity.y))
             self.scene().shapes_manager.clear_temp_shapes()
             self.scene().shapes_manager.add_shape(self.current_line)
             self.temp_point = None
@@ -329,8 +324,6 @@ class CustomGraphicsView(QGraphicsView):
                 self.current_line.set_proportion(self.temp_line, formula)
                 self.current_line.set_proportion(self.temp_point, formula)
 
-                #self.current_line.entity = self.temp_line.entity.parallel_line(
-                #    sp.Point(self.temp_point.entity.x, self.temp_point.entity.y))
                 self.scene().shapes_manager.clear_temp_shapes()
                 self.scene().shapes_manager.add_shape(self.current_line)
                 self.temp_point = None
@@ -535,6 +528,7 @@ class CustomGraphicsView(QGraphicsView):
             len_sec_elem -= 1
             self.handle_delete(element, is_invisible=is_invisible)  # Запускаем рекурсию
         if not is_invisible:
+            self.deleted_shapes[shape] = shape.get_info()
             self.scene().shapes_manager.remove_shape(shape)
         else:
             if is_invisible == 1:
@@ -552,8 +546,7 @@ class CustomGraphicsView(QGraphicsView):
         self.change_cursor()
 
     def handle_point_movement(self, point, logical_pos):
-        in_owners_in_secondary = [element for element in point.owner if point in element.secondary_elements]  # Наверное можно использовать connected_shapes, но к моменту проверки всего кода я уже заябалась
-
+        in_owners_in_secondary = [element for element in point.owner if point in element.secondary_elements]
         if logical_pos is None:  # Если точка уже переместилась (идет из handle_element_movement)
             pass  # Стоит намеренно, чтобы не заглядывать в другие случаи
         # Если точка в secondary_elements больше чем у 1 объекта, то она никуда не двигается
@@ -786,8 +779,6 @@ class CustomGraphicsView(QGraphicsView):
             elif self.current_tool == 'Eraser':
                 self.change_cursor()
                 closest_polygon = next((shape for shape in closest_shape[2] if isinstance(shape, Polygon)), None)
-                self.shapes_before = [shape for shapes_list in self.scene().shapes_manager.shapes.values() for shape in
-                                      shapes_list]
 
                 if closest_polygon:
                     self.handle_delete(closest_polygon)
@@ -796,10 +787,11 @@ class CustomGraphicsView(QGraphicsView):
                 elif closest_shape[0]:
                     self.handle_delete(closest_shape[0])
 
-        self.scene().update_scene()
+                if self.deleted_shapes:
+                    self.execute_command(DeleteShapeCommand(self, self.deleted_shapes))
+                    self.deleted_shapes = {}
 
-        # TODO: (Winter) find_closest_shape есть в handle_point, нужно убрать
-        # TODO: (Winter) После того, как применили Inf, closest_shape выдает его и все ломается
+        self.scene().update_scene()
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
@@ -829,6 +821,9 @@ class CustomGraphicsView(QGraphicsView):
                 self.handle_delete(closest_point)
             elif closest_shape[0]:
                 self.handle_delete(closest_shape[0])
+            if self.deleted_shapes:
+                self.execute_command(DeleteShapeCommand(self, self.deleted_shapes))
+                self.deleted_shapes = {}
 
         self.initiate_temp_shape_drawing(logical_pos)
         self.scene().update_scene()
@@ -837,12 +832,6 @@ class CustomGraphicsView(QGraphicsView):
         super().mouseReleaseEvent(event)
         if event.button() == Qt.LeftButton:
             self.unsetCursor()  # Ставит обычный курсор после разжатия мыши
-            if self.current_tool == "Eraser":
-                shapes_after = [shape for shapes_list in self.scene().shapes_manager.shapes.values() for shape in
-                                shapes_list]
-                added_shapes = [shape for shape in shapes_after if shape not in self.shapes_before]
-                self.execute_command(DeleteShapeCommand(self, added_shapes))
-
         if self.moving_shape is not None:
             scene_pos = self.mapToScene(event.pos())
             new_pos = self.scene().to_logical_coords(scene_pos.x(), scene_pos.y())
