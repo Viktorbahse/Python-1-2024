@@ -128,6 +128,8 @@ def update_secondary_point_coords(c, a, a_new, b=None, b_new=None, line=None, is
         new_position_modified = sp.Point(new_position.x + 1, new_position.y)
     else:
         new_position_modified = new_position
+    if fixed_point == new_position or moving_point == new_position_modified:
+        return c
 
     moving_line_modified = sp.Line(moving_point, new_position_modified)
     static_moving_line = sp.Line(fixed_point, new_position)
@@ -135,6 +137,8 @@ def update_secondary_point_coords(c, a, a_new, b=None, b_new=None, line=None, is
     line_c_new = moving_line_modified.parallel_line(c)
     intersection_point = static_moving_line.intersection(line_c_new)
     if intersection_point:
+        if isinstance(intersection_point[0], sp.Line2D):
+            return c
         return intersection_point[0]
 
 

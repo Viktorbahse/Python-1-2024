@@ -30,69 +30,57 @@ class MoveShapeCommand:
 
 
 class CreateShapeCommand:
-    def __init__(self, custom_graphics_view, shapes, is_deepcopy=False):
+    def __init__(self, custom_graphics_view, shapes):
         self.custom_graphics_view = custom_graphics_view
-        self.shapes = shapes
-
-        def sort_key(shape):
-            if isinstance(shape, Polygon):
-                return 0
-            elif isinstance(shape, Point):
-                return 2
-            else:
-                return 1
-
-        self.shapes.sort(key=sort_key)
-        self.shapes_copy = [copy.copy(shape) for shape in shapes]
+        self.shapes = sorted(shapes, key=sort_key)
+        self.shapes_copy = {shape: shape.get_info() for shape in shapes}
 
     def execute(self):
         # Создание фигуры
         for shape, copied_shape in zip(self.shapes, self.shapes_copy):
-            new_shape_info = copied_shape.get_info()
+            new_shape_info = self.shapes_copy[shape]
             for key, value in new_shape_info.items():
                 setattr(shape, key, value)  # Копирование данных
 
         for shape in self.shapes:
+            if isinstance(shape, Polygon):
+                for element in shape.primary_elements:
+                    if isinstance(element, Segment):
+                        shape.add_secondary_element(element)
             for element in shape.primary_elements:
                 element.add_owner(shape)
             for element in shape.secondary_elements:
                 element.add_owner(shape)
             for owner in shape.proportions:
                 owner.add_secondary_element(shape)
-            self.custom_graphics_view.scene().shapes_manager.shapes[type(shape)].append(shape)
+            self.custom_graphics_view.scene().shapes_manager.add_shape(shape)
 
     def undo(self):
         for shape in self.shapes:
             self.custom_graphics_view.handle_delete(shape)
 
 
-class DeleteShapeCommand:  # Пока не работает
-    def __init__(self, custom_graphics_view, shapes, is_deepcopy=False):
+class DeleteShapeCommand:
+    def __init__(self, custom_graphics_view, shapes):
         self.custom_graphics_view = custom_graphics_view
-        self.shapes = shapes
-
-        def sort_key(shape):
-            if isinstance(shape, Polygon):
-                return 0
-            elif isinstance(shape, Point):
-                return 2
-            else:
-                return 1
-
-        self.shapes.sort(key=sort_key)
-        self.shapes_copy = [copy.copy(shape) for shape in shapes]
+        self.shapes = sorted(list(shapes.keys()), key=sort_key)
+        self.shapes_info = shapes
 
     def execute(self):
         for shape in self.shapes:
             self.custom_graphics_view.handle_delete(shape)
 
     def undo(self):
-        for shape, copied_shape in zip(self.shapes, self.shapes_copy):
-            new_shape_info = copied_shape.get_info()
+        for shape in self.shapes:
+            new_shape_info = self.shapes_info[shape]
             for key, value in new_shape_info.items():
-                setattr(shape, key, value)  # Копирование данных
+                setattr(shape, key, value)
 
         for shape in self.shapes:
+            if isinstance(shape, Polygon):
+                for element in shape.primary_elements:
+                    if isinstance(element, Segment):
+                        shape.add_secondary_element(element)
             for element in shape.primary_elements:
                 element.add_owner(shape)
             for element in shape.secondary_elements:
@@ -100,3 +88,12 @@ class DeleteShapeCommand:  # Пока не работает
             for owner in shape.proportions:
                 owner.add_secondary_element(shape)
             self.custom_graphics_view.scene().shapes_manager.shapes[type(shape)].append(shape)
+
+
+def sort_key(shape):
+    if isinstance(shape, Polygon):
+        return 0
+    elif isinstance(shape, Point):
+        return 2
+    else:
+        return 1
