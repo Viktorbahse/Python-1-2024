@@ -3,10 +3,10 @@ from PyQt5.QtCore import Qt
 from gui.custom_graphics_view import CustomGraphicsView
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QAction
 from PyQt5.QtCore import Qt, QSize, QTimer
-from gui.custom_graphics_view import CustomGraphicsView
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
 from gui.timing_widget import TimingWidget
+from gui.redo_undo_buttons import *
 from tests.timing import *
 from gui.uploading_downloading_files import *
 
@@ -51,6 +51,11 @@ class MainWindow(QMainWindow):
         self.dockTools.set_active_tool("Move")
         self.dockTools.btnAddEdFunc.clicked.connect(self.onAddEdFunc)
         self.dockTools.connect_actions(self.tool_selected)
+
+        home_button = UndoRedoButton(parent=self, view=self.view, command="undo")
+        home_button.move(260, 70)
+        redo_button = UndoRedoButton(parent=self, view=self.view, command="redo")
+        redo_button.move(360, 70)
 
         if self.display_timing:  # Текст с временем работы функции
             self.init_timing_widget()
