@@ -3,11 +3,8 @@ from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QTab
 from PyQt5.QtCore import QSize, Qt, QThread
 from PyQt5 import QtCore
 import requests
-import datetime
-import socket
-import pickle
 
-SERVER_URL = 'http://192.168.0.105:8080'  # И тут вроде надо изменить, чтобы не локально было
+SERVER_URL = "http://127.0.0.1:5000/process_strings"  # И тут вроде надо изменить, чтобы не локально было
 
 
 class ProfileButton(QPushButton):
@@ -45,55 +42,22 @@ class ProfileButton(QPushButton):
 class CheckThread(QThread):
     mysignal = QtCore.pyqtSignal(str)
 
-    # def thr_login(self, name, passw):
-    #     login(name, passw, self.mysignal)
-    #
-    # def thr_register(self, name, passw):
-    #     register(name, passw, self.mysignal)
+    def test(self):
+        data = ["string1", "string2", "string3"]
+
+        # Отправляем POST запрос с массивом строк на сервер
+        response = requests.post(SERVER_URL, json=data)
+        print(response.json())
 
     def thr_register(self, name, passw):
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect(('localhost', 9998))
-        func_name = "register"
-        strings = [name, passw]
-
-        # Сериализация данных
-        data = pickle.dumps((func_name, strings))
-
-        # Отправка данных на сервер
-        client_socket.send(data)
-
-        # Получение результата от сервера
-        result = client_socket.recv(4096)
-
-        # Десериализация результата
-        result = pickle.loads(result)
-
-        # Закрытие соединения с сервером
-        client_socket.close()
-        self.mysignal.emit(result)
+        data = ['register', name, passw]
+        result = requests.post(SERVER_URL, json=data)
+        self.mysignal.emit(result.json())
 
     def thr_login(self, name, passw):
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect(('localhost', 9998))
-        func_name = "login"
-        strings = [name, passw]
-
-        # Сериализация данных
-        data = pickle.dumps((func_name, strings))
-
-        # Отправка данных на сервер
-        client_socket.send(data)
-
-        # Получение результата от сервера
-        result = client_socket.recv(4096)
-
-        # Десериализация результата
-        result = pickle.loads(result)
-
-        # Закрытие соединения с сервером
-        client_socket.close()
-        self.mysignal.emit(result)
+        data = ['login', name, passw]
+        result = requests.post(SERVER_URL, json=data)
+        self.mysignal.emit(result.json())
 
 
 class ExitConfirmationWidget(QWidget):

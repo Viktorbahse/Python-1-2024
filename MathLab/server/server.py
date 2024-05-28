@@ -4,6 +4,7 @@ import sqlite3
 import socket
 import pickle
 
+
 def login(data):
     db_path = 'handler/users.db'
     con = sqlite3.connect(db_path)
@@ -107,34 +108,18 @@ def upload_file():
     return jsonify({'message': f'File {file.filename} successfully uploaded'})
 
 
+@app.route('/process_strings', methods=['POST'])
+def process_strings():
+    # Получаем массив строк из запроса
+    data = request.json
+    if data[0] == "login":
+        result = login([data[1], data[2]])
+    elif data[0] == "register":
+        result = register([data[1], data[2]])
+    else:
+        result = "Invalid function name: " + data[0] + "!"
+    return jsonify(result)
+
+
 if __name__ == '__main__':
-    # app.run(debug=True)  # Чтобы был не локальный вместо этого вроде app.run(host='0.0.0.0', port=5000) нужно написать
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 9998))
-    server_socket.listen(5)
-
-    print("Server is listening...")
-
-    while True:
-        # Принимаем входящее соединение
-        client_socket, address = server_socket.accept()
-        print(f"Connection from {address} has been established!")
-
-        # Получаем данные от клиента
-        data = client_socket.recv(4096)
-
-        # Десериализуем данные, чтобы получить имя функции и массив строк
-        func_name, strings = pickle.loads(data)
-
-        # Вызываем соответствующую функцию и получаем результат
-        if func_name == "login":
-            result = login(strings)
-        elif func_name == "register":
-            result = register(strings)
-        else:
-            result = "Invalid function name: " + func_name
-        # Отправляем результат клиенту
-        client_socket.send(pickle.dumps(result))
-
-        # Закрываем соединение с клиентом
-        client_socket.close()
+    app.run(debug=True)  # Чтобы был не локальный вместо этого вроде app.run(host='0.0.0.0', port=5000) нужно написать
