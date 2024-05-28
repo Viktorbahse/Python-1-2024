@@ -1,0 +1,43 @@
+{
+    "saved_params": {
+        "zoom_factor": 50.0,
+        "base_point": [
+            0,
+            0
+        ]
+    },
+    "saved_shapes": {
+        "Points": [
+            {
+                "name": "A",
+                "color": [
+                    71,
+                    181,
+                    255,
+                    255
+                ],
+                "radius": 5,
+                "x": -2.5,
+                "y": 1.41
+            },
+            {
+                "name": "B",
+                "color": [
+                    71,
+                    181,
+                    255,
+                    255
+                ],
+                "radius": 5,
+                "x": 4.3,
+                "y": -0.53
+            }
+        ],
+        "Lines": [],
+        "Segments": [],
+        "Rays": [],
+        "Circles": [],
+        "Polygons": [],
+        "Infos": []
+    }
+}

@@ -1,4 +1,5 @@
 from sympy import symbols, lambdify
+from PyQt5.QtCore import pyqtSignal, QObject
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import *
 from tests.timing import *
@@ -6,10 +7,14 @@ from tests.timing import *
 SEARCH_RADIUS = 5
 
 
+class Communicate(QObject):
+    shapesChanged = pyqtSignal()
+
 class ShapesManager:
     def __init__(self):
+        self.comm = Communicate()
         # Словарик для хранения фигур
-        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: [], Function: []}
+        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Info: [], Function: []}
         # Словарик для временных фигур
         self.temp_shapes = {Segment: [], Line: [], Ray: [], Circle: []}
         self.selected_points = []
@@ -18,12 +23,18 @@ class ShapesManager:
         if type(shape) == Point:
             shape.creating_name()
         self.shapes[type(shape)].append(shape)
+        self.comm.shapesChanged.emit()
 
     def remove_shape(self, shape):
+        changes = False
         if shape in self.shapes[type(shape)]:
             self.shapes[type(shape)].remove(shape)
+            changes = True
         if type(shape) != Point:
             shape.__del__()
+            changes = True
+        if changes:
+            self.comm.shapesChanged.emit()
 
     def add_temp_shape(self, shape):
         shape_type = type(shape)
@@ -50,7 +61,7 @@ class ShapesManager:
 
         for shape_list in self.shapes.values():
             for shape in shape_list:
-                if isinstance(shape, Inf):  # Пока костыль 
+                if isinstance(shape, Info):  # Пока костыль
                     continue
                 if shape.invisible:  # Если объект невидимый, то пользователь с ним никак не взаимодействует
                     continue

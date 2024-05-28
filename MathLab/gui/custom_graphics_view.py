@@ -398,7 +398,7 @@ class CustomGraphicsView(QGraphicsView):
                      self.scene().shapes_manager.selected_points[1].entity.x) / 2
                 y = (self.scene().shapes_manager.selected_points[0].entity.y +
                      self.scene().shapes_manager.selected_points[1].entity.y) / 2
-                self.scene().shapes_manager.add_shape(Inf(x, y, message))
+                self.scene().shapes_manager.add_shape(Info(x, y, message))
                 self.scene().shapes_manager.clear_selected_points()
 
     def handle_circle_creation(self, logical_pos, closest_point):

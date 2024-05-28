@@ -18,6 +18,7 @@ class Circle(Shape):
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.line_color)
+        self.typeShape = 'Circle'
 
     def __del__(self):
         super().__del__()
@@ -76,6 +77,7 @@ class Polygon(Shape):
         self.point_color = self.color
         self.line_color = self.color
         self.owner = owner if owner is not None else []
+        self.typeShape = 'Polygon'
 
     def __del__(self):
         super().__del__()
@@ -119,6 +121,7 @@ class Function(Shape):
         self.f = x ** 2
         self.points_of_discontinuity = singularities(self.f, x)
         super().__init__(color)
+        self.typeShape = 'Function'
 
     def evaluate(self, x_value):
         y_value = self.f.subs('x', x_value)
