@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction, QLabel
 from PyQt5.QtCore import Qt
 from gui.custom_graphics_view import CustomGraphicsView
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, \
+    QAction
 from PyQt5.QtCore import Qt, QSize, QTimer
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
@@ -9,6 +10,7 @@ from gui.timing_widget import TimingWidget
 from gui.redo_undo_buttons import *
 from tests.timing import *
 from gui.uploading_downloading_files import *
+from core.geometric_objects.figure import *
 
 default_size = [1200, 800]
 
@@ -89,6 +91,7 @@ class MainWindow(QMainWindow):
     def onAddEdFunc(self):
         print("onAddEdFunc")
         # self.edFuncs = {}
+        self.scene.shapes_manager.functions.append(Function())
         edAndBtn = self.dockTools.addEdFunc()
         edAndBtn['ed'].textChanged.connect(self.onTextChangedEdFunc)
         edAndBtn['btn'].clicked.connect(self.onDelEdFunc)
@@ -105,6 +108,7 @@ class MainWindow(QMainWindow):
         btn = self.sender()
         num = self.findIndexEdFunc(btn, 1)
         print(num, ": ")
+        del self.scene.shapes_manager.functions[num]
         layItem = self.dockTools.layEdFuncs.itemAt(num)
         for i in range(layItem.count()):
             layItem.itemAt(i).widget().deleteLater()
@@ -114,6 +118,9 @@ class MainWindow(QMainWindow):
         ed = self.sender()
         num = self.findIndexEdFunc(ed, 0)
         print(num, ": ", ed.text())
+        self.scene.shapes_manager.functions[num].reset(ed.text().lower())  # Обновляем функцию.
+        # self.scene.shapes_manager.resolve_intersections()  # Обновляем точки пересечения функций.
+        print(num, ": ", self.scene.shapes_manager.functions[num].entity)
 
     def tool_selected(self, tool_name):
         self.view.current_tool = tool_name

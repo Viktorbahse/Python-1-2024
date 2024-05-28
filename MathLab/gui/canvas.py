@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QGraphicsPathItem
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, \
+    QGraphicsPathItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
 from PyQt5.QtCore import Qt, QPointF, QLineF, QThread, pyqtSignal, QTimer, QObject
 from core.shapes_manager import ShapesManager
@@ -9,6 +10,10 @@ import numpy as np
 import sympy as sp
 import math
 import time
+import multiprocessing
+import numpy as np
+import sympy as sp
+import concurrent.futures
 
 
 class Canvas(QGraphicsScene):
@@ -135,8 +140,9 @@ class Canvas(QGraphicsScene):
         for shape in self.shapes_manager.shapes[Circle]:
             if not shape.invisible:
                 self.draw_circle(shape)
-        for shape in self.shapes_manager.shapes[Function]:
-            self.draw_function(shape)
+        self.draw_all_fanctions()
+        # for shape in self.shapes_manager.shapes[Function]:
+        #     self.draw_function(shape)
         for shape in self.shapes_manager.shapes[Point]:
             if not shape.invisible:
                 self.draw_point(shape)
@@ -177,16 +183,66 @@ class Canvas(QGraphicsScene):
         self.addLine(center_x, 0, center_x - arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
         self.addLine(center_x, 0, center_x + arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
 
-    def draw_function(self, shape):
-        for i in range(0, 1600, 7):
-            x1, y1 = self.to_logical_coords(i, 0)
-            x2, y2 = self.to_logical_coords(i + 7, 0)
-            scene_x1, scene_y1 = self.to_scene_coords(x1, float(shape.evaluate(x1)))
-            scene_x, scene_y = self.to_scene_coords(x2, float(shape.evaluate(x2)))
-            if scene_y1 > 0 or scene_y > 0:
-                line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
-                line.setPen(QPen(QColor(*shape.color), shape.width))
-                self.addItem(line)
+    # def draw_function(self, shape):
+    #     for i in range(0, 1600, 7):
+    #         x1, y1 = self.to_logical_coords(i, 0)
+    #         x2, y2 = self.to_logical_coords(i + 7, 0)
+    #         scene_x1, scene_y1 = self.to_scene_coords(x1, float(shape.evaluate(x1)))
+    #         scene_x, scene_y = self.to_scene_coords(x2, float(shape.evaluate(x2)))
+    #         if scene_y1 > 0 or scene_y > 0:
+    #             line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
+    #             line.setPen(QPen(QColor(*shape.color), shape.width))
+    #             self.addItem(line)
+
+    def draw_all_fanctions(self):
+        path = QPainterPath()
+        x_start, _ = self.to_logical_coords(0, 0)
+        x_end, _ = self.to_logical_coords(self.sceneRect().width(), 0)
+        for func in self.shapes_manager.functions:
+            if func.corect:
+                bad_points = list(func.discontinuity_points.intersect(sp.Interval(x_start, x_end)))
+                if func.type in ["line", "const"]:  # Оптимизация для линий.
+                    x, y = self.to_scene_coords(x_start, func.evaluate(x_start))
+                    path.moveTo(QPointF(x, y))
+                    x, y = self.to_scene_coords(x_end, func.evaluate(x_end))
+                    path.lineTo(QPointF(x, y))
+                elif len(bad_points) == 0:
+                    drawing_status = False
+                    x_values = np.linspace(float(x_start), float(x_end), 400)
+                    y_values = func.f(x_values)
+                    for i in range(len(x_values)):
+                        if math.isnan(y_values[i]):
+                            drawing_status = False
+                        else:
+                            if not drawing_status:
+                                x, y = self.to_scene_coords(x_values[i], y_values[i])
+                                path.moveTo(QPointF(x, y))
+                                drawing_status = True
+                            else:
+                                x, y = self.to_scene_coords(x_values[i], y_values[i])
+                                path.lineTo(QPointF(x, y))
+                else:
+                    bad_points = [x_start] + bad_points + [x_end]
+                    for i in range(len(bad_points) - 1):
+                        if func.is_defined((bad_points[i] + bad_points[i + 1]) / 2):
+                            accuracy = 100
+                            if len(bad_points) > 5:
+                                accuracy = 40
+                            x_values = np.linspace(float(bad_points[i] + (bad_points[i + 1] - bad_points[i]) / 200000),
+                                                   float(bad_points[i + 1] - (
+                                                           bad_points[i + 1] - bad_points[i]) / 200000), accuracy)
+                            y_values = func.f(x_values)
+
+                            x, y = self.to_scene_coords(x_values[0], y_values[0])
+                            path.moveTo(QPointF(x, y))
+                            for j in range(1, len(x_values)):
+                                x, y = self.to_scene_coords(x_values[j], y_values[j])
+                                path.lineTo(QPointF(x, y))
+
+        path_item = QGraphicsPathItem()
+        path_item.setPath(path)
+        path_item.setPen(QPen(Qt.red, 2))
+        self.addItem(path_item)
 
     def draw_grid(self, color=(80, 80, 80, 255)):
         # Отрисовка сетки

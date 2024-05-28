@@ -9,8 +9,9 @@ SEARCH_RADIUS = 5
 class ShapesManager:
     def __init__(self):
         # Словарик для хранения фигур
-        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: [], Function: []}
+        self.shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Inf: []}
         # Словарик для временных фигур
+        self.functions = []  # Массив для функций.
         self.temp_shapes = {Segment: [], Line: [], Ray: [], Circle: []}
         self.selected_points = []
 
