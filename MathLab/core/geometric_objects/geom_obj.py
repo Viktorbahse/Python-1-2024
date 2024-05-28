@@ -3,13 +3,20 @@ from math import *
 from core.geometric_objects.figure import *
 import re
 from abc import ABC, abstractmethod
+#import math
+import json
+import uuid
 
 
 class Shape(ABC):
+
     def __init__(self, entity=None, color=(0, 0, 0, 255), width=1.5):  # rgb + прозрачность
         self.color = color
         self.entity = entity
         self.width = width
+
+        self.uid = str(uuid.uuid4())
+        self.typeShape = 'Shape'
 
         self.owner = []  # Элементы, к которым принадлежит объект (владелец объекта)
         # Основные элементы, принадлежащие объекту (без них не живет, и основные не удаляются вместе с объектом)
@@ -157,7 +164,7 @@ class Shape(ABC):
         pass
 
 
-class Inf:
+class Info:
     def __init__(self, x, y, message):
         self.x = x
         self.y = y
@@ -177,6 +184,7 @@ class Point(Shape):
         self.owner = owner if owner is not None else []  # Определяем список
         self.connected_shapes = []  # Линии и окружности, на которых эта точка находиться
         self.update_color()
+        self.typeShape = 'Point'
 
     def __del__(self):
         if self.name and re.match(r"^[A-Z][0-9]*$", self.name):
@@ -243,6 +251,7 @@ class Segment(Shape):
         self.point_color = color
         for shape in self.owner:
             self.set_color(shape.line_color)
+        self.typeShape = 'Segment'
 
     def __del__(self):
         super().__del__()
@@ -277,6 +286,7 @@ class Line(Shape):
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.line_color)
+        self.typeShape = 'Line'
 
     def __del__(self):
         super().__del__()
@@ -311,6 +321,7 @@ class Ray(Shape):
         self.owner = owner if owner is not None else []
         for shape in self.owner:
             self.set_color(shape.line_color)
+        self.typeShape = 'Ray'
 
     def __del__(self):
         super().__del__()

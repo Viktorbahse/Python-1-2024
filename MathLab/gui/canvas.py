@@ -144,7 +144,7 @@ class Canvas(QGraphicsScene):
         for shape in self.shapes_manager.shapes[Point]:
             if not shape.invisible:
                 self.draw_point(shape)
-        for text in self.shapes_manager.shapes[Inf]:
+        for text in self.shapes_manager.shapes[Info]:
             self.draw_text(text.message, *self.to_scene_coords(text.x, text.y), center_x=True, center_y=True)
 
     def draw_temp_shapes(self):
@@ -354,7 +354,7 @@ class Canvas(QGraphicsScene):
         return label
 
     def draw_circle(self, shape):
-        scene_x1, scene_y1 = self.to_scene_coords(shape.points[0].entity.x, shape.points[0].entity.y)
+        scene_x1, scene_y1 = self.to_scene_coords(shape.entity.center.x, shape.entity.center.y)
         scene_x, scene_y = self.to_scene_coords(shape.points[1].entity.x, shape.points[1].entity.y)
         rad = (((scene_x1 - scene_x) ** 2 + (scene_y1 - scene_y) ** 2) ** 0.5)
 
@@ -375,15 +375,15 @@ class Canvas(QGraphicsScene):
 
     def draw_segment(self, shape):
         # Отрисовка линий
-        scene_x1, scene_y1 = self.to_scene_coords(shape.points[0].entity.x, shape.points[0].entity.y)
-        scene_x2, scene_y2 = self.to_scene_coords(shape.points[1].entity.x, shape.points[1].entity.y)
+        scene_x1, scene_y1 = self.to_scene_coords(shape.entity.p1.x, shape.entity.p1.y)
+        scene_x2, scene_y2 = self.to_scene_coords(shape.entity.p2.x, shape.entity.p2.y)
         segment = QGraphicsLineItem(scene_x1, scene_y1, scene_x2, scene_y2)
         segment.setPen(QPen(QColor(*shape.color), shape.width))
         self.addItem(segment)
 
     def draw_ray(self, shape):
-        scene_x1, scene_y1 = self.to_scene_coords(shape.points[0].entity.x, shape.points[0].entity.y)
-        scene_x, scene_y = self.to_scene_coords(shape.points[1].entity.x, shape.points[1].entity.y)
+        scene_x1, scene_y1 = self.to_scene_coords(shape.entity.p1.x, shape.entity.p1.y)
+        scene_x, scene_y = self.to_scene_coords(shape.entity.p2.x, shape.entity.p2.y)
         if scene_x1 == scene_x:
             if scene_y > scene_y1:
                 line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, self.sceneRect().height())
