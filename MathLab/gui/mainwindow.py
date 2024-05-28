@@ -89,7 +89,6 @@ class MainWindow(QMainWindow):
         self.uploading_downloading_files.show()
 
     def onAddEdFunc(self):
-        print("onAddEdFunc")
         # self.edFuncs = {}
         self.scene.shapes_manager.functions.append(Function())
         edAndBtn = self.dockTools.addEdFunc()
@@ -107,7 +106,6 @@ class MainWindow(QMainWindow):
     def onDelEdFunc(self):
         btn = self.sender()
         num = self.findIndexEdFunc(btn, 1)
-        print(num, ": ")
         del self.scene.shapes_manager.functions[num]
         layItem = self.dockTools.layEdFuncs.itemAt(num)
         for i in range(layItem.count()):
@@ -117,10 +115,9 @@ class MainWindow(QMainWindow):
     def onTextChangedEdFunc(self):
         ed = self.sender()
         num = self.findIndexEdFunc(ed, 0)
-        print(num, ": ", ed.text())
         self.scene.shapes_manager.functions[num].reset(ed.text().lower())  # Обновляем функцию.
+        self.view.scene().update_scene()
         # self.scene.shapes_manager.resolve_intersections()  # Обновляем точки пересечения функций.
-        print(num, ": ", self.scene.shapes_manager.functions[num].entity)
 
     def tool_selected(self, tool_name):
         self.view.current_tool = tool_name
