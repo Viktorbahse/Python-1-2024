@@ -141,8 +141,6 @@ class Canvas(QGraphicsScene):
             if not shape.invisible:
                 self.draw_circle(shape)
         self.draw_all_fanctions()
-        # for shape in self.shapes_manager.shapes[Function]:
-        #     self.draw_function(shape)
         for shape in self.shapes_manager.shapes[Point]:
             if not shape.invisible:
                 self.draw_point(shape)
@@ -182,17 +180,6 @@ class Canvas(QGraphicsScene):
         # Стрелочки для y
         self.addLine(center_x, 0, center_x - arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
         self.addLine(center_x, 0, center_x + arrow_length / 2, arrow_length, QPen(QColor(*color), 1))
-
-    # def draw_function(self, shape):
-    #     for i in range(0, 1600, 7):
-    #         x1, y1 = self.to_logical_coords(i, 0)
-    #         x2, y2 = self.to_logical_coords(i + 7, 0)
-    #         scene_x1, scene_y1 = self.to_scene_coords(x1, float(shape.evaluate(x1)))
-    #         scene_x, scene_y = self.to_scene_coords(x2, float(shape.evaluate(x2)))
-    #         if scene_y1 > 0 or scene_y > 0:
-    #             line = QGraphicsLineItem(scene_x1, scene_y1, scene_x, scene_y)
-    #             line.setPen(QPen(QColor(*shape.color), shape.width))
-    #             self.addItem(line)
 
     def draw_all_fanctions(self):
         path = QPainterPath()

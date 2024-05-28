@@ -11,6 +11,7 @@ from gui.redo_undo_buttons import *
 from tests.timing import *
 from gui.uploading_downloading_files import *
 from core.geometric_objects.figure import *
+from gui.authorization_interface import *
 
 default_size = [1200, 800]
 
@@ -24,7 +25,10 @@ class MainWindow(QMainWindow):
 
         self.uploading_downloading_files = None
         self.display_timing = False  # Включает показ времени, за которое работает та или иная функция
-
+        self.authorization = None
+        self.registration = None
+        self.log_out_widget = None
+        self.is_authorized = False
         self.initUI()
         self.initMenu()
 
@@ -58,6 +62,8 @@ class MainWindow(QMainWindow):
         home_button.move(260, 70)
         redo_button = UndoRedoButton(parent=self, view=self.view, command="redo")
         redo_button.move(360, 70)
+        self.profile_button = ProfileButton(parent=self, view=self.view)
+        self.profile_button.move(self.width() - 70, 50)
 
         if self.display_timing:  # Текст с временем работы функции
             self.init_timing_widget()
@@ -75,6 +81,9 @@ class MainWindow(QMainWindow):
         exitAction.setShortcut('Ctrl+Q')
         exitAction.triggered.connect(self.close)
         fileMenu.addAction(exitAction)
+        Authorization = QAction('Войти', self)
+        Authorization.triggered.connect(self.open_authorization)
+        menubar.addAction(Authorization)
 
     def init_timing_widget(self):
         # Создает текст, где показывается время работы функции
@@ -87,6 +96,41 @@ class MainWindow(QMainWindow):
         if not self.uploading_downloading_files:
             self.uploading_downloading_files = UploadingDownloadingFiles()  # Создаем окно только, если оно еще не создано
         self.uploading_downloading_files.show()
+
+    def open_reg(self):
+        self.authorization.close()
+        if not self.registration:
+            self.registration = Registration_interface(window=self)
+        self.registration.show()
+
+    def log_out_open_widget(self):
+        if not self.log_out_widget:
+            self.log_out_widget = ExitConfirmationWidget(mainwindow=self)
+        self.log_out_widget.show()
+
+    def log_out(self, flag):
+        self.log_out_widget.close()
+        self.log_out_widget = None
+        if flag:
+            self.is_authorized = False
+            self.profile_button.setText("😐")
+
+    def open_authorization(self):
+        if not self.authorization:
+            self.authorization = Log_in_interface(window=self)
+            self.authorization.log_in_ui.pushButton_sign_up.clicked.connect(self.open_reg)
+        self.authorization.show()
+
+    def successful_authorization(self):
+        self.is_authorized = True
+        self.profile_button.setText("😉")
+        self.authorization.close()
+        self.authorization = None
+
+    def successful_registration(self):
+        self.registration.close()
+        self.registration = None
+        self.open_authorization()
 
     def onAddEdFunc(self):
         # self.edFuncs = {}
