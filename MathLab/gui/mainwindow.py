@@ -5,7 +5,8 @@ from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, Q
 from PyQt5.QtCore import Qt
 from gui.custom_graphics_view import CustomGraphicsView
 from sympy import sympify
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QMessageBox, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, \
+    QMessageBox, QAction
 from PyQt5.QtCore import Qt, QSize, QTimer, QFile
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
@@ -30,12 +31,12 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("MathLab [*]")
         self.setMinimumSize(QSize(600, 400))
         self.setGeometry(100, 100, 1200, 800)
-
         self.uploading_downloading_files = None
         self.display_timing = False  # Включает показ времени, за которое работает та или иная функция
         self.authorization = None
         self.registration = None
         self.log_out_widget = None
+        self.conection_id = None
         self.is_authorized = False
         self.initUI()
         self.initMenu()
@@ -52,6 +53,7 @@ class MainWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
     def showEvent(self, event):
         self.selectMode()
         event.accept()
@@ -154,14 +156,14 @@ class MainWindow(QMainWindow):
         Authorization.triggered.connect(self.open_authorization)
         menubar.addAction(Authorization)
 
-
     def onClose(self):
         self.confirmContinue()
 
     def confirmContinue(self):
         if not self.isWindowModified():
             return True
-        res = QMessageBox.question(self, "MathLab", "Есть несохраненные изменения. Вы хотите продолжить?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        res = QMessageBox.question(self, "MathLab", "Есть несохраненные изменения. Вы хотите продолжить?",
+                                   QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if res == QMessageBox.Yes:
             return True
         return False
@@ -185,7 +187,6 @@ class MainWindow(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self, "Открыть файл MathLab", "", "*.json;;*.*")
         if fileName:
             self.loadFile(fileName)
-
 
     def readRoot(self, root):
         self.scene.base_point = root['saved_params']['base_point']
@@ -310,6 +311,7 @@ class MainWindow(QMainWindow):
 
         self.correct(array_shapes)
         self.scene.shapes_manager.shapes = shapes
+
     def correct(self, array_shapes):
         for shape in array_shapes:
             if shape.typeShape:
@@ -379,12 +381,12 @@ class MainWindow(QMainWindow):
                 for shape in shapes[key]:
                     if type(shape) == Point:
                         obj_params = {'name': shape.name, 'color': shape.color,
-                                                       'uid': shape.uid, 'typeShape': shape.typeShape,
-                                                       'point_color': shape.point_color,
-                                                       'line_color': shape.line_color,
-                                                       'radius': shape.radius,
-                                                       'x': str(shape.entity.x), 'y': str(shape.entity.y),
-                                                       'invisible': shape.invisible, 'width': shape.width}
+                                      'uid': shape.uid, 'typeShape': shape.typeShape,
+                                      'point_color': shape.point_color,
+                                      'line_color': shape.line_color,
+                                      'radius': shape.radius,
+                                      'x': str(shape.entity.x), 'y': str(shape.entity.y),
+                                      'invisible': shape.invisible, 'width': shape.width}
                         owner_params = []
                         for sh in shape.owner:
                             owner_params.append({'typeShape': sh.typeShape, 'uid': sh.uid})
@@ -404,10 +406,12 @@ class MainWindow(QMainWindow):
                         saved_shapes['Points'].append(obj_params)
                     if type(shape) == Line:
                         obj_params = {'color': shape.color, 'width': shape.width,
-                                                      'x1': str(shape.primary_elements[0].entity.x), 'y1': str(shape.primary_elements[0].entity.y),
-                                                      'x2': str(shape.primary_elements[1].entity.x), 'y2': str(shape.primary_elements[1].entity.y),
-                                                      'uid': shape.uid, 'typeShape': shape.typeShape,
-                                                      'invisible': shape.invisible, 'point_color': shape.point_color}
+                                      'x1': str(shape.primary_elements[0].entity.x),
+                                      'y1': str(shape.primary_elements[0].entity.y),
+                                      'x2': str(shape.primary_elements[1].entity.x),
+                                      'y2': str(shape.primary_elements[1].entity.y),
+                                      'uid': shape.uid, 'typeShape': shape.typeShape,
+                                      'invisible': shape.invisible, 'point_color': shape.point_color}
                         owner_params = []
                         for sh in shape.owner:
                             owner_params.append({'typeShape': sh.typeShape, 'uid': sh.uid})
@@ -424,8 +428,10 @@ class MainWindow(QMainWindow):
 
                     if type(shape) == Segment:
                         obj_params = {'color': shape.color, 'width': shape.width,
-                                      'x1': str(shape.primary_elements[0].entity.x), 'y1': str(shape.primary_elements[0].entity.y),
-                                      'x2': str(shape.primary_elements[1].entity.x), 'y2': str(shape.primary_elements[1].entity.y),
+                                      'x1': str(shape.primary_elements[0].entity.x),
+                                      'y1': str(shape.primary_elements[0].entity.y),
+                                      'x2': str(shape.primary_elements[1].entity.x),
+                                      'y2': str(shape.primary_elements[1].entity.y),
                                       'invisible': shape.invisible, 'point_color': shape.point_color,
                                       'uid': shape.uid, 'typeShape': shape.typeShape}
                         owner_params = []
@@ -443,8 +449,10 @@ class MainWindow(QMainWindow):
                         saved_shapes['Segments'].append(obj_params)
                     if type(shape) == Ray:
                         obj_params = {'color': shape.color, 'width': shape.width,
-                                      'x1': str(shape.primary_elements[0].entity.x), 'y1': str(shape.primary_elements[0].entity.y),
-                                      'x2': str(shape.primary_elements[1].entity.x), 'y2': str(shape.primary_elements[1].entity.y),
+                                      'x1': str(shape.primary_elements[0].entity.x),
+                                      'y1': str(shape.primary_elements[0].entity.y),
+                                      'x2': str(shape.primary_elements[1].entity.x),
+                                      'y2': str(shape.primary_elements[1].entity.y),
                                       'invisible': shape.invisible, 'point_color': shape.point_color,
                                       'uid': shape.uid, 'typeShape': shape.typeShape}
                         owner_params = []
@@ -462,8 +470,10 @@ class MainWindow(QMainWindow):
                         saved_shapes['Rays'].append(obj_params)
                     if type(shape) == Circle:
                         obj_params = {'color': shape.color, 'width': shape.width,
-                                      'x1': str(shape.primary_elements[0].entity.x), 'y1': str(shape.primary_elements[0].entity.y),
-                                      'x2': str(shape.primary_elements[1].entity.x), 'y2': str(shape.primary_elements[1].entity.y),
+                                      'x1': str(shape.primary_elements[0].entity.x),
+                                      'y1': str(shape.primary_elements[0].entity.y),
+                                      'x2': str(shape.primary_elements[1].entity.x),
+                                      'y2': str(shape.primary_elements[1].entity.y),
                                       'invisible': shape.invisible, 'point_color': shape.point_color,
                                       'uid': shape.uid, 'typeShape': shape.typeShape}
                         owner_params = []

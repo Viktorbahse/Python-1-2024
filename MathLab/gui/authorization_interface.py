@@ -4,7 +4,7 @@ from PyQt5.QtCore import QSize, Qt, QThread
 from PyQt5 import QtCore
 import requests
 
-SERVER_URL = "http://127.0.0.1:5000/process_strings"  # И тут вроде надо изменить, чтобы не локально было
+SERVER_URL = "http://127.0.0.1:5000/"  # И тут вроде надо изменить, чтобы не локально было
 
 
 class ProfileButton(QPushButton):
@@ -42,21 +42,15 @@ class ProfileButton(QPushButton):
 class CheckThread(QThread):
     mysignal = QtCore.pyqtSignal(str)
 
-    def test(self):
-        data = ["string1", "string2", "string3"]
-
-        # Отправляем POST запрос с массивом строк на сервер
-        response = requests.post(SERVER_URL, json=data)
-        print(response.json())
-
     def thr_register(self, name, passw, email):
-        data = ['register', name, passw, email]
-        result = requests.post(SERVER_URL, json=data)
+        data = [name, passw, email]
+        result = requests.post(SERVER_URL + 'registration', json=data)
         self.mysignal.emit(result.json())
 
     def thr_login(self, name, passw):
-        data = ['login', name, passw]
-        result = requests.post(SERVER_URL, json=data)
+        data = [name, passw]
+        result = requests.post(SERVER_URL + 'login', json=data)
+        result.json()
         self.mysignal.emit(result.json())
 
 
@@ -148,7 +142,7 @@ class Registration_interface(QWidget):
 
     def signal_hanler(self, value):
         QMessageBox.about(self, 'Оповещение', value)
-        if (value == 'Вы успешно зарегистрированы!'):
+        if (value == 'Успешная регистрация!'):
             self.parent.successful_registration()
 
 

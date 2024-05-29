@@ -1,22 +1,20 @@
 from flask import Flask, request, send_from_directory, jsonify, abort
 import os
 import sqlite3
+from pathlib import Path
+
+db_path = 'handler/users.db'
 
 
 def login(data):
-    db_path = 'handler/users.db'
     con = sqlite3.connect(db_path)
     cur = con.cursor()
-    # tret="table"
-    # cur.execute(f'SELECT name FROM sqlite_master WHERE type="{tret}";')
-    # # Получить результат запроса
-    # table_names = [table[0] for table in cur.fetchall()]
-    # # Вывести имена таблиц
-    # print(table_names)
     cur.execute(f'SELECT * FROM users WHERE name="{data[0]}";')
     value = cur.fetchall()
 
     if value != [] and value[0][2] == data[1]:
+        cur.execute('UPDATE users SET ssesion_id=? WHERE name=?;', (data[2], data[0]))
+        con.commit()
         cur.close()
         con.close()
         return 'Успеспешная авторизация!'
@@ -27,7 +25,6 @@ def login(data):
 
 
 def register(data):
-    db_path = 'handler/users.db'
     con = sqlite3.connect(db_path)
     cur = con.cursor()
     cur.execute(f'SELECT * FROM users WHERE name="{data[0]}";')
@@ -46,7 +43,8 @@ def register(data):
         con.commit()
         cur.close()
         con.close()
-        return 'Вы успешно зарегистрированы!'
+        Path('handler/' + data[0]).mkdir()
+        return 'Успешная регистрация!'
 
 
 # Путь, где на сервере хранятся файлы
@@ -110,16 +108,19 @@ def upload_file():
     return jsonify({'message': f'File {file.filename} successfully uploaded'})
 
 
-@app.route('/process_strings', methods=['POST'])
-def process_strings():
+@app.route('/registration', methods=['POST'])
+def sign_up():
+    data = request.json
+    result = register(data)
+    return jsonify(result)
+
+
+@app.route('/login', methods=['POST'])
+def log_in():
     # Получаем массив строк из запроса
     data = request.json
-    if data[0] == "login":
-        result = login([data[1], data[2]])
-    elif data[0] == "register":
-        result = register([data[1], data[2], data[3]])
-    else:
-        result = "Invalid function name: " + data[0] + "!"
+    client_ip = request.remote_addr
+    result = login(data + [client_ip])
     return jsonify(result)
 
 
