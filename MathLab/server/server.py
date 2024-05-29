@@ -1,8 +1,6 @@
 from flask import Flask, request, send_from_directory, jsonify, abort
 import os
 import sqlite3
-import socket
-import pickle
 
 
 def login(data):
@@ -33,18 +31,22 @@ def register(data):
     con = sqlite3.connect(db_path)
     cur = con.cursor()
     cur.execute(f'SELECT * FROM users WHERE name="{data[0]}";')
-    value = cur.fetchall()
+    login = cur.fetchall()
+    cur.execute(f'SELECT * FROM users WHERE email="{data[2]}";')
+    email = cur.fetchall()
 
-    if value != []:
+    if login != []:
         cur.close()
         con.close()
-        return 'Такой пользователь уже есть!'
-    elif value == []:
-        cur.execute(f"INSERT INTO users (name, passwor) VALUES ('{data[0]}', '{data[1]}')")
+        return 'Извините, этот логин уже занят. Пожалуйста, выберите другой логин.'
+    elif email != []:
+        return 'Извините, на это почту уже зарегистрирован аккаунт.'
+    elif login == [] and email == []:
+        cur.execute(f"INSERT INTO users (name, password, email) VALUES ('{data[0]}', '{data[1]}', '{data[2]}')")
         con.commit()
         cur.close()
         con.close()
-        return 'Успешная регистрация!'
+        return 'Вы успешно зарегистрированы!'
 
 
 # Путь, где на сервере хранятся файлы
@@ -115,7 +117,7 @@ def process_strings():
     if data[0] == "login":
         result = login([data[1], data[2]])
     elif data[0] == "register":
-        result = register([data[1], data[2]])
+        result = register([data[1], data[2], data[3]])
     else:
         result = "Invalid function name: " + data[0] + "!"
     return jsonify(result)

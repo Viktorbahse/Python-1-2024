@@ -49,8 +49,8 @@ class CheckThread(QThread):
         response = requests.post(SERVER_URL, json=data)
         print(response.json())
 
-    def thr_register(self, name, passw):
-        data = ['register', name, passw]
+    def thr_register(self, name, passw, email):
+        data = ['register', name, passw, email]
         result = requests.post(SERVER_URL, json=data)
         self.mysignal.emit(result.json())
 
@@ -130,14 +130,25 @@ class Registration_interface(QWidget):
         QtCore.QMetaObject.connectSlotsByName(self)
         self.show()
 
+    def check_input(funct):
+        def wrapper(self):
+            for line_edit in self.base_line_edit:
+                if len(line_edit.text()) == 0:
+                    return
+            funct(self)
+
+        return wrapper
+
+    @check_input
     def reg(self):
         name = self.sign_up_ui.line_edit_login.text()
         passw = self.sign_up_ui.line_edit_password.text()
-        self.check_db.thr_register(name, passw)
+        email = self.sign_up_ui.line_edit_email.text()
+        self.check_db.thr_register(name, passw, email)
 
     def signal_hanler(self, value):
         QMessageBox.about(self, 'Оповещение', value)
-        if (value == 'Успешная регистрация!'):
+        if (value == 'Вы успешно зарегистрированы!'):
             self.parent.successful_registration()
 
 
