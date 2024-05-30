@@ -16,9 +16,29 @@
                     255,
                     255
                 ],
+                "uid": "8960dd7c-58ea-4a16-8a88-0b15e50d7302",
+                "typeShape": "Point",
+                "point_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "line_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
                 "radius": 5,
-                "x": -2.5,
-                "y": 1.41
+                "x": "-29/10",
+                "y": "5/2",
+                "invisible": false,
+                "width": 1.5,
+                "owner": [],
+                "primary_elements": [],
+                "secondary_elements": [],
+                "connected_shapes": []
             },
             {
                 "name": "B",
@@ -28,9 +48,29 @@
                     255,
                     255
                 ],
+                "uid": "88fe3867-aa8d-4cfa-92c2-70b5d6771c10",
+                "typeShape": "Point",
+                "point_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "line_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
                 "radius": 5,
-                "x": 4.3,
-                "y": -0.53
+                "x": "69/50",
+                "y": "34/25",
+                "invisible": false,
+                "width": 1.5,
+                "owner": [],
+                "primary_elements": [],
+                "secondary_elements": [],
+                "connected_shapes": []
             }
         ],
         "Lines": [],
@@ -38,6 +78,7 @@
         "Rays": [],
         "Circles": [],
         "Polygons": [],
-        "Infos": []
+        "Infos": [],
+        "Functions": []
     }
 }

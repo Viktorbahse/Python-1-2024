@@ -1,5 +1,6 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
     <file>resources/task01_01.json</file>
+    <file>resources/task01_01_sol.json</file>
 </qresource>
 </RCC>

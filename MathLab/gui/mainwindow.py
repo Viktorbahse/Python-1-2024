@@ -45,6 +45,7 @@ class MainWindow(QMainWindow):
         filename = ":/resources/" + dlg.currentFileName + ".json"
         print("Task Selected", filename)
         self.loadFile(filename)
+        self.fileNameSol = ":/resources/" + dlg.currentFileName + "_sol.json"
         self.runGame = True
 
     def closeEvent(self, event):
@@ -69,10 +70,44 @@ class MainWindow(QMainWindow):
         else:
             print("reject")
 
+    # def line_equation(self, point1, point2):
+    #     k = (point2.x * point1.y - point2.y * point1.x)/(point2.x - point1.x)
+    #     b = (point2.y - point1.y) / (point2.x - point1.x)
+    #     return [k, b]
+    #
+    # def is_line_equal(self, line1, line2):
+    #     l1 = self.line_equation(line1.x, line1.y)
+    #     l2 = self.line_equation(line2.x, line2.y)
+    #     return l1[0] == l2[0] and l1[1] == l2[1]
+
+    def read_answer(self, filename):
+        inFile = QFile(filename)
+        if not inFile.open(QFile.ReadOnly | QFile.Text):
+            QMessageBox.warning(self, "MathLab", "Не могу открыть файл %s\n%s" % (filename, inFile.errorString()))
+            return
+        ba = inFile.readAll()
+        inFile.close()
+        root = json.loads(str(ba, 'utf-8'))
+        return root
+
     def checkWin(self):
-        return True
+        filename = self.fileNameSol
+        root = self.read_answer(filename)
+        pass
+        shapes = self.scene.shapes_manager.shapes
+        if root['type'] == 'Point':
+            pass
+        if root['type'] == 'Line':
+            answer = sp.Line(sp.Point(sympify(root['params'][0]), sympify(root['params'][1])),
+                          sp.Point(sympify(root['params'][2]), sympify(root['params'][3])))
+            for line in shapes[Line]:
+                if (line.entity.equals(answer)):
+                    return True
+        # и т д
+        return False
 
     def onSceneChanged(self):
+
         self.setWindowModified(True)
         if self.runGame == True:
             if self.checkWin():
@@ -173,11 +208,15 @@ class MainWindow(QMainWindow):
             return
         ba = inFile.readAll()
         inFile.close()
-        root = json.loads(str(ba, 'utf-8'))
-        self.readRoot(root)
-        self.fileName = fileName
-        self.setWindowModified(False)
-        self.setWindowTitle("MathLab %s [*]" % self.fileName)
+        if len(ba) > 0:
+            root = json.loads(str(ba, 'utf-8'))
+            self.readRoot(root, fileName)
+            self.fileName = fileName
+            self.setWindowModified(False)
+            self.setWindowTitle("MathLab %s [*]" % self.fileName)
+        else:
+            QMessageBox.warning(self, "MathLab", "Не могу открыть файл %s\n" % (fileName))
+            return
 
     def open(self):
         if not self.confirmContinue():
@@ -187,15 +226,24 @@ class MainWindow(QMainWindow):
             self.loadFile(fileName)
 
 
-    def readRoot(self, root):
-        self.scene.base_point = root['saved_params']['base_point']
-        self.scene.zoom_factor = root['saved_params']['zoom_factor']
-        self.shapes_to_scene(root['saved_shapes'])
+    def readRoot(self, root, fileName):
+        if 'saved_params' in root:
+            self.scene.base_point = root['saved_params']['base_point']
+            self.scene.zoom_factor = root['saved_params']['zoom_factor']
+        else:
+            QMessageBox.warning(self, "MathLab", "Не могу открыть файл %s\n" % (fileName))
+            return
+        if 'saved_shapes' in root:
+            self.shapes_to_scene(root['saved_shapes'])
+        else:
+            QMessageBox.warning(self, "MathLab", "Не могу открыть файл %s\n" % (fileName))
+            return
         self.scene.update_scene()
 
     def shapes_to_scene(self, saved_shapes):
         print('start shapes_to_scene')
-        shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Info: [], Function: []}
+        shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Info: []}
+        func_shapes = []
         array_shapes = []
         for key in saved_shapes:
             if key == 'Points':
@@ -282,10 +330,22 @@ class MainWindow(QMainWindow):
 
             if key == 'Polygons':
                 for saved_polygon in saved_shapes[key]:
-                    pnt = saved_polygon['points']
+                    pnt = []
+                    for p in saved_polygon['points']:
+                        pnt.append(Point(sympify(p['x']), sympify(p['y'])))
                     polygon = Polygon(pnt, color=saved_polygon['color'])
+                    polygon.primary_elements = []
+                    polygon.uid = saved_polygon['uid']
+                    polygon.typeShape = saved_polygon['typeShape']
+                    polygon.color = saved_polygon['color']
+                    polygon.point_color = saved_polygon['point_color']
+                    polygon.width = saved_polygon['width']
+                    polygon.invisible = saved_polygon['invisible']
+                    polygon.temp_owner = saved_polygon['owner']
+                    polygon.temp_primary = saved_polygon['primary_elements']
+                    polygon.temp_secondary = saved_polygon['secondary_elements']
                     shapes[Polygon].append(polygon)
-
+                    array_shapes.append(polygon)
             if key == 'Lines':
                 for saved_line in saved_shapes[key]:
                     pnt = [Point(sympify(saved_line['x1']), sympify(saved_line['y1'])),
@@ -306,11 +366,17 @@ class MainWindow(QMainWindow):
                     print('array_shapes append line', line.uid)
 
             if key == 'Functions':
-                pass
+                for saved_function in saved_shapes[key]:
+                    pass
+                    #function = saved_function['expr']
+                    # self.onAddEdFunc()
 
-        self.correct(array_shapes)
+        self.correct_array(array_shapes)
         self.scene.shapes_manager.shapes = shapes
-    def correct(self, array_shapes):
+        self.scene.shapes_manager.functions = func_shapes
+
+
+    def correct_array(self, array_shapes):
         for shape in array_shapes:
             if shape.typeShape:
                 for obj in shape.temp_owner:
@@ -361,6 +427,7 @@ class MainWindow(QMainWindow):
     def saveFile(self, fileName):
         with open(fileName, 'w', encoding='utf-8') as f:
             shapes = self.scene.shapes_manager.shapes
+            func_shapes = self.scene.shapes_manager.functions
 
             zoom = self.scene.zoom_factor
             base = self.scene.base_point
@@ -504,8 +571,10 @@ class MainWindow(QMainWindow):
                         obj_params['points'] = points_coords
                         saved_shapes['Polygons'].append(obj_params)
 
-                    if type(shape) == Function:
-                        pass
+            for shape in func_shapes:
+                if type(shape) == Function:
+                    obj_params = {'expr': shape.entity}
+                    saved_shapes['Functions'].append(obj_params)
 
             root = {'saved_params': saved_params, 'saved_shapes': saved_shapes}
             json.dump(root, f, indent=4)

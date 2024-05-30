@@ -186,7 +186,7 @@ class Canvas(QGraphicsScene):
         x_start, _ = self.to_logical_coords(0, 0)
         x_end, _ = self.to_logical_coords(self.sceneRect().width(), 0)
         for func in self.shapes_manager.functions:
-            if func.corect:
+            if func.correct:
                 bad_points = list(func.discontinuity_points.intersect(sp.Interval(x_start, x_end)))
                 if func.type in ["line", "const"]:  # Оптимизация для линий.
                     x, y = self.to_scene_coords(x_start, func.evaluate(x_start))

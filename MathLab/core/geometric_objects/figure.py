@@ -116,12 +116,14 @@ class Polygon(Shape):
 
 class Function(Shape):
     def __init__(self, string=""):
-        self.corect = False
+        super().__init__()
+        self.correct = False
         self.color = (255, 0, 0, 255)
         self.entity = string
         self.width = 1.5
         self.x = sp.symbols('x')
         self.type = None
+        self.typeShape = 'Function'
 
     def reset(self, string):
         self.entity = string
@@ -129,10 +131,10 @@ class Function(Shape):
             self.expr = sp.sympify(string) if isinstance(string, str) else string  # Преобр. строку в мат выражение
             self.f = sp.lambdify(self.x, self.expr, 'numpy')
             self.discontinuity_points = sp.singularities(self.expr, self.x)
-            self.corect = True
+            self.correct = True
             self.test_type()
         except:
-            self.corect = False
+            self.correct = False
             self.type = "False"
 
     def test_type(
