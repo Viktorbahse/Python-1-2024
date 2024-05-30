@@ -62,21 +62,43 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Это наш запрос. Можно в поиске http://127.0.0.1:5000/list и получить ответ
 @app.route('/list', methods=['GET'])
 def list_files():
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE ssesion_id="{client_ip}";')
+    data = cur.fetchall()
     files_info = []
+    if data != []:
+        path = 'handler/' + str(data[0][1])
+        for file_name in os.listdir(path):
+            file_path = os.path.join(path, file_name)
+            file_stat = os.stat(file_path)
 
-    for file_name in os.listdir(uploads_dir):
-        file_path = os.path.join(uploads_dir, file_name)
-        file_stat = os.stat(file_path)
+            file_info = {
+                'name': file_name,
+                'size': file_stat.st_size,
+                'created': file_stat.st_ctime,
+                'modified': file_stat.st_mtime,  # Время последнего изменения файла
+                'accessed': file_stat.st_atime  # Время последнего доступа к файлу, это как примеры
+            }
+            files_info.append(file_info)
 
-        file_info = {
-            'name': file_name,
-            'size': file_stat.st_size,
-            'created': file_stat.st_ctime,
-            'modified': file_stat.st_mtime,  # Время последнего изменения файла
-            'accessed': file_stat.st_atime  # Время последнего доступа к файлу, это как примеры
-        }
-        files_info.append(file_info)
+    else:
+        for file_name in os.listdir(uploads_dir):
+            file_path = os.path.join(uploads_dir, file_name)
+            file_stat = os.stat(file_path)
 
+            file_info = {
+                'name': file_name,
+                'size': file_stat.st_size,
+                'created': file_stat.st_ctime,
+                'modified': file_stat.st_mtime,  # Время последнего изменения файла
+                'accessed': file_stat.st_atime  # Время последнего доступа к файлу, это как примеры
+            }
+            files_info.append(file_info)
+
+    cur.close()
+    con.close()
     return jsonify({'files': files_info})
 
 
@@ -103,8 +125,17 @@ def upload_file():
     # Проверка наличия имени файла
     if file.filename == '':
         return jsonify({'error': 'No selected file'})
-
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE ssesion_id="{client_ip}";')
+    data = cur.fetchall()
+    if data != []:
+        path = 'handler/' + str(data[0][1])
+        app.config['FOLDER'] = path
+        file.save(os.path.join(app.config['FOLDER'], file.filename))
+    else:
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
     return jsonify({'message': f'File {file.filename} successfully uploaded'})
 
 
@@ -122,6 +153,18 @@ def log_in():
     client_ip = request.remote_addr
     result = login(data + [client_ip])
     return jsonify(result)
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute('UPDATE users SET ssesion_id=? WHERE ssesion_id=?;', ("null", client_ip))
+    con.commit()
+    cur.close()
+    con.close()
+    return jsonify("Ssesion_end")
 
 
 if __name__ == '__main__':

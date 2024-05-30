@@ -1,30 +1,35 @@
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QPushButton, QLabel, QHeaderView, QFileDialog
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QPushButton, \
+    QLabel, QHeaderView, QFileDialog
 from PyQt5.QtCore import Qt
 import requests
 import datetime
+import os
+import shutil
 
 SERVER_URL = 'http://localhost:5000'  # И тут вроде надо изменить, чтобы не локально было
 
 
 class UploadingDownloadingFiles(QWidget):
 
-    def __init__(self):
+    def __init__(self, mainwindow):
         super().__init__()
         self.setWindowTitle("Server Window")
         self.setGeometry(200, 200, 800, 600)
-
+        self.mainwindow = mainwindow
         # Создаем таблицу
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(["Имя файла", "Дата создания", "Дата изменения", "Размер"])
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Запрещаем редактирование ячеек
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)  # Растягиваем по ширине окна
-
         self.btn_upload = QPushButton("Загрузить")
         self.btn_upload.clicked.connect(self.upload_button_clicked)
 
         self.btn_download = QPushButton("Скачать")
         self.btn_download.clicked.connect(self.download_button_clicked)
+
+        self.btn_open = QPushButton("Открыть")
+        self.btn_open.clicked.connect(self.open_button_clicked)
 
         self.btn_list = QPushButton("Обновить список")
         self.btn_list.clicked.connect(self.update_files)
@@ -37,6 +42,7 @@ class UploadingDownloadingFiles(QWidget):
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.btn_upload)
         button_layout.addWidget(self.btn_download)
+        button_layout.addWidget(self.btn_open)
         button_layout.addWidget(self.btn_list)
 
         layout.addLayout(button_layout)
@@ -84,6 +90,8 @@ class UploadingDownloadingFiles(QWidget):
         response = requests.get(f'{SERVER_URL}/download/{filename}')
         with open(filename, 'wb') as file:
             file.write(response.content)
+        shutil.copyfile(filename, "files/" + filename)
+        os.unlink(filename)
         return f'File {filename} downloaded successfully'
 
     def list_files(self):
@@ -119,3 +127,13 @@ class UploadingDownloadingFiles(QWidget):
             self.lbl_last_updated.setText(response_text)
         else:
             self.lbl_last_updated.setText("Выберите файл для скачивания")
+
+    def open_button_clicked(self):
+        selected_row = self.table.currentRow()
+        if selected_row != -1:  # Если выбрана
+            filename = self.table.item(selected_row, 0).text()
+            response_text = self.download_file(filename)
+            self.lbl_last_updated.setText(response_text)
+            self.mainwindow.open('files/' + filename)
+        else:
+            self.lbl_last_updated.setText("Выберите файл, который хотите открыть.")

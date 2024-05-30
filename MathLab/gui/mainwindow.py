@@ -2,7 +2,7 @@ import json
 from MathLab import game_rc
 # from sympy.parsing.sympy_parser import parse_expr
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction, QLabel
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore
 from gui.custom_graphics_view import CustomGraphicsView
 from sympy import sympify
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, \
@@ -17,7 +17,8 @@ from gui.uploading_downloading_files import *
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import Point, Line, Segment, Ray, Info
 from dlgselectmode import DlgSelectMode
-
+import datetime
+import os
 from gui.authorization_interface import *
 
 default_size = [1200, 800]
@@ -38,6 +39,7 @@ class MainWindow(QMainWindow):
         self.log_out_widget = None
         self.conection_id = None
         self.is_authorized = False
+        # self.destroyed.connect(self.on_destroyed)
         self.initUI()
         self.initMenu()
         self.scene.shapes_manager.comm.shapesChanged.connect(self.onSceneChanged)
@@ -140,6 +142,10 @@ class MainWindow(QMainWindow):
         saveAsAction.triggered.connect(self.saveAs)
         fileMenu.addAction(saveAsAction)
 
+        save_to_server_action = QAction('Сохранить на сервер', self)
+        save_to_server_action.triggered.connect(self.save_to_server)
+        fileMenu.addAction(save_to_server_action)
+
         fileMenu.addSeparator()
 
         selectModeAction = QAction('Выбрать режим...', self)
@@ -152,9 +158,6 @@ class MainWindow(QMainWindow):
         exitAction.setShortcut('Ctrl+Q')
         exitAction.triggered.connect(self.close)
         fileMenu.addAction(exitAction)
-        Authorization = QAction('Войти', self)
-        Authorization.triggered.connect(self.open_authorization)
-        menubar.addAction(Authorization)
 
     def onClose(self):
         self.confirmContinue()
@@ -181,10 +184,13 @@ class MainWindow(QMainWindow):
         self.setWindowModified(False)
         self.setWindowTitle("MathLab %s [*]" % self.fileName)
 
-    def open(self):
+    def open(self, file_name=None):
         if not self.confirmContinue():
             return
-        fileName, _ = QFileDialog.getOpenFileName(self, "Открыть файл MathLab", "", "*.json;;*.*")
+
+        fileName = file_name
+        if fileName is None:
+            fileName, _ = QFileDialog.getOpenFileName(self, "Открыть файл MathLab", "", "*.json;;*.*")
         if fileName:
             self.loadFile(fileName)
 
@@ -360,6 +366,18 @@ class MainWindow(QMainWindow):
         if fileName:
             self.saveFile(fileName)
 
+    def save_to_server(self):
+        if self.is_authorized:
+            if self.uploading_downloading_files is None:
+                self.uploading_downloading_files = UploadingDownloadingFiles(self)
+            date_time_string = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"files/{date_time_string}.json"
+            self.saveFile(filename)
+            self.uploading_downloading_files.upload_file(filename)
+            os.unlink(filename)
+        else:
+            QMessageBox.about(self, 'Оповещение', "Войдите или зарегистрируйтесь!")
+
     def saveFile(self, fileName):
         with open(fileName, 'w', encoding='utf-8') as f:
             shapes = self.scene.shapes_manager.shapes
@@ -532,7 +550,8 @@ class MainWindow(QMainWindow):
 
     def open_uploading_downloading_files(self):
         if not self.uploading_downloading_files:
-            self.uploading_downloading_files = UploadingDownloadingFiles()  # Создаем окно только, если оно еще не создано
+            self.uploading_downloading_files = UploadingDownloadingFiles(
+                self)  # Создаем окно только, если оно еще не создано
         self.uploading_downloading_files.show()
 
     def open_reg(self):
@@ -550,6 +569,8 @@ class MainWindow(QMainWindow):
         self.log_out_widget.close()
         self.log_out_widget = None
         if flag:
+            if self.uploading_downloading_files:
+                self.uploading_downloading_files.update_files()
             self.is_authorized = False
             self.profile_button.setText("😐")
 
@@ -564,6 +585,8 @@ class MainWindow(QMainWindow):
         self.profile_button.setText("😉")
         self.authorization.close()
         self.authorization = None
+        if self.uploading_downloading_files:
+            self.uploading_downloading_files.update_files()
 
     def successful_registration(self):
         self.registration.close()

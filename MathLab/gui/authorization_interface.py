@@ -76,6 +76,7 @@ class ExitConfirmationWidget(QWidget):
         self.layout.addWidget(self.no_button)
 
     def yes_button_clicked(self):
+        requests.post(SERVER_URL + 'logout')
         self.mainwindow.log_out(True)
 
     def no_button_clicked(self):
