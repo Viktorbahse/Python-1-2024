@@ -107,12 +107,29 @@ def list_files():
 def download_file(filename):
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    # Проверяем, существует ли файл
-    if os.path.isfile(filepath):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE ssesion_id="{client_ip}";')
+    data = cur.fetchall()
+    cur.close()
+    con.close()
+    if data != []:
+        path = 'handler/' + str(data[0][1])
+        app.config['FOLDER'] = path
+        filepath = os.path.join(app.config['FOLDER'], filename)
+        if os.path.isfile(filepath):
+            return send_from_directory(app.config['FOLDER'], filename, as_attachment=True)
+        else:
+            # Если файл не найден, то возвращаем ответ. Русские буквы вроде не распознает (на страничке)
+            return jsonify({'error': 'File not found'})
     else:
-        # Если файл не найден, то возвращаем ответ. Русские буквы вроде не распознает (на страничке)
-        return jsonify({'error': 'File not found'})
+        # Проверяем, существует ли файл
+        if os.path.isfile(filepath):
+            return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+        else:
+            # Если файл не найден, то возвращаем ответ. Русские буквы вроде не распознает (на страничке)
+            return jsonify({'error': 'File not found'})
 
 
 # Загрузка на сервер. Уже на страничке не проверишь.
@@ -136,6 +153,8 @@ def upload_file():
         file.save(os.path.join(app.config['FOLDER'], file.filename))
     else:
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+    cur.close()
+    con.close()
     return jsonify({'message': f'File {file.filename} successfully uploaded'})
 
 

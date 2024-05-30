@@ -91,7 +91,7 @@ class UploadingDownloadingFiles(QWidget):
         with open(filename, 'wb') as file:
             file.write(response.content)
         shutil.copyfile(filename, "files/" + filename)
-        os.unlink(filename)
+        os.remove(filename)
         return f'File {filename} downloaded successfully'
 
     def list_files(self):
@@ -134,6 +134,6 @@ class UploadingDownloadingFiles(QWidget):
             filename = self.table.item(selected_row, 0).text()
             response_text = self.download_file(filename)
             self.lbl_last_updated.setText(response_text)
-            self.mainwindow.open('files/' + filename)
+            self.mainwindow.open_server_file('files/' + filename)
         else:
             self.lbl_last_updated.setText("Выберите файл, который хотите открыть.")

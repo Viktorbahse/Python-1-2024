@@ -184,13 +184,16 @@ class MainWindow(QMainWindow):
         self.setWindowModified(False)
         self.setWindowTitle("MathLab %s [*]" % self.fileName)
 
-    def open(self, file_name=None):
+    def open_server_file(self, filename):
         if not self.confirmContinue():
             return
+        if (filename):
+            self.loadFile(filename)
 
-        fileName = file_name
-        if fileName is None:
-            fileName, _ = QFileDialog.getOpenFileName(self, "Открыть файл MathLab", "", "*.json;;*.*")
+    def open(self):
+        if not self.confirmContinue():
+            return
+        fileName, _ = QFileDialog.getOpenFileName(self, "Открыть файл MathLab", "", "*.json;;*.*")
         if fileName:
             self.loadFile(fileName)
 
