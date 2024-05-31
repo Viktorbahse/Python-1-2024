@@ -5,8 +5,10 @@ from tests.timing import *
 
 SEARCH_RADIUS = 5
 
+
 class Communicate(QObject):
     shapesChanged = pyqtSignal()
+
 
 class ShapesManager:
     def __init__(self):
@@ -34,7 +36,6 @@ class ShapesManager:
         if changes:
             self.comm.shapesChanged.emit()
 
-
     def add_temp_shape(self, shape):
         shape_type = type(shape)
         self.temp_shapes[shape_type].append(shape)
@@ -60,7 +61,7 @@ class ShapesManager:
 
         for shape_list in self.shapes.values():
             for shape in shape_list:
-                if isinstance(shape, Info):  # Пока костыль
+                if isinstance(shape, Info):
                     continue
                 if shape.invisible:  # Если объект невидимый, то пользователь с ним никак не взаимодействует
                     continue

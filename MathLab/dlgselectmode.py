@@ -27,7 +27,6 @@ class DlgSelectMode(QDialog):
         self.btnQuit.clicked.connect(self.onQuitClicked)
 
     def onGameClicked(self):
-        print("OnGameClicked")
         self.modeGame = True
 
         dlg = DlgSelectLevel()
@@ -39,7 +38,6 @@ class DlgSelectMode(QDialog):
 
         self.accept()
     def onWorkClicked(self):
-        print("OnWorkClicked")
         self.modeGame = False
         self.accept()
 

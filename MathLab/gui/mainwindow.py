@@ -25,11 +25,11 @@ from gui.authorization_interface import *
 
 default_size = [1200, 800]
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.listWins = self.loadListWins()
-
 
         self.runGame = False
         self.fileName = None
@@ -287,7 +287,6 @@ class MainWindow(QMainWindow):
         self.scene.update_scene()
 
     def shapes_to_scene(self, saved_shapes):
-        print('start shapes_to_scene')
         shapes = {Point: [], Segment: [], Polygon: [], Line: [], Ray: [], Circle: [], Info: []}
         func_shapes = []
         array_shapes = []
@@ -310,7 +309,6 @@ class MainWindow(QMainWindow):
                     point.temp_connected_shapes = saved_point['connected_shapes']
                     shapes[Point].append(point)
                     array_shapes.append(point)
-                    print('array_shapes append point', point.uid)
 
             if key == 'Segments':
                 for saved_segment in saved_shapes[key]:
@@ -329,7 +327,6 @@ class MainWindow(QMainWindow):
                     segment.temp_secondary = saved_segment['secondary_elements']
                     shapes[Segment].append(segment)
                     array_shapes.append(segment)
-                    print('array_shapes append segment', segment.uid)
 
             if key == 'Rays':
                 for saved_ray in saved_shapes[key]:
@@ -348,7 +345,6 @@ class MainWindow(QMainWindow):
                     ray.temp_secondary = saved_ray['secondary_elements']
                     shapes[Ray].append(ray)
                     array_shapes.append(ray)
-                    print('array_shapes append ray', ray.uid)
 
             if key == 'Circles':
                 for saved_circle in saved_shapes[key]:
@@ -367,7 +363,6 @@ class MainWindow(QMainWindow):
                     circle.temp_secondary = saved_circle['secondary_elements']
                     shapes[Circle].append(circle)
                     array_shapes.append(circle)
-                    print('array_shapes append circle', circle.uid)
 
             if key == 'Infos':
                 for saved_info in saved_shapes[key]:
@@ -409,18 +404,14 @@ class MainWindow(QMainWindow):
                     line.temp_secondary = saved_line['secondary_elements']
                     shapes[Line].append(line)
                     array_shapes.append(line)
-                    print('array_shapes append line', line.uid)
 
             if key == 'Functions':
                 for saved_function in saved_shapes[key]:
                     pass
-                    #function = saved_function['expr']
-                    # self.onAddEdFunc()
 
         self.correct_array(array_shapes)
         self.scene.shapes_manager.shapes = shapes
         self.scene.shapes_manager.functions = func_shapes
-
 
     def correct_array(self, array_shapes):
         for shape in array_shapes:
@@ -733,7 +724,6 @@ class MainWindow(QMainWindow):
         num = self.findIndexEdFunc(ed, 0)
         self.scene.shapes_manager.functions[num].reset(ed.text().lower())  # Обновляем функцию.
         self.view.scene().update_scene()
-        # self.scene.shapes_manager.resolve_intersections()  # Обновляем точки пересечения функций.
 
     def tool_selected(self, tool_name):
         self.view.current_tool = tool_name

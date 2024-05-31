@@ -9,8 +9,9 @@ import os
 from PyQt5.QtGui import QIcon, QPixmap
 
 # Чтобы было локально
-#SERVER_URL = "http://127.0.0.1:5000/"
-SERVER_URL = 'http://18.226.17.149:5000'  # Чтобы не локально было
+SERVER_URL = "http://127.0.0.1:5000/"
+# Чтобы не локально было
+# SERVER_URL = 'http://18.226.177.149:5000/'
 
 
 def show_error_message(e):
@@ -28,6 +29,8 @@ def error_handling_decorator(func):
     def wrapper(*args, **kwargs):
         try:
             response = func(*args, **kwargs)
+            if response is None:
+                return None
             response.raise_for_status()
             return response
         except requests.exceptions.RequestException as e:
@@ -258,5 +261,5 @@ class Log_in_interface(QWidget):
 
     def signal_hanler(self, value):
         QMessageBox.about(self, 'Оповещение', value)
-        if (value == 'Успеспешная авторизация!'):
+        if value == 'Успеспешная авторизация!':
             self.parent.successful_authorization()

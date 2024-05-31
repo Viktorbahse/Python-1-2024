@@ -111,7 +111,6 @@ def list_files():
                 }
                 files_info.append(file_info)
 
-
     else:
         for file_name in os.listdir(uploads_dir):
             file_path = os.path.join(uploads_dir, file_name)

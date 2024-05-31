@@ -1,5 +1,4 @@
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, \
-    QGraphicsPathItem
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QGraphicsPathItem
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QPainterPath
 from PyQt5.QtCore import Qt, QPointF, QLineF, QThread, pyqtSignal, QTimer, QObject
 from core.shapes_manager import ShapesManager
@@ -87,7 +86,6 @@ class Canvas(QGraphicsScene):
             self.upper_width *= 2
 
         self.canvas_logical_width = current_width
-        # TODO: (Winter) доделать красивые значения
 
     def pretty_step_increase(self, step):
         # Определяет следующее большее "красивое" значение

@@ -6,7 +6,10 @@ import datetime
 import os
 import shutil
 
-SERVER_URL = 'http://localhost:5000'  # И тут вроде надо изменить, чтобы не локально было
+# Чтобы было локально
+SERVER_URL = "http://127.0.0.1:5000"
+# Чтобы не локально было
+# SERVER_URL = 'http://18.226.177.149:5000'
 
 
 class UploadingDownloadingFiles(QWidget):
@@ -81,6 +84,7 @@ class UploadingDownloadingFiles(QWidget):
 
     def upload_file(self, filename):
         # Открываем файл, чтобы отправить на сервер
+
         with open(filename, 'rb') as file:
             files = {'file': file}
             response = requests.post(f'{SERVER_URL}/upload', files=files)
@@ -111,12 +115,15 @@ class UploadingDownloadingFiles(QWidget):
         self.lbl_last_updated.setText(f"Последнее обновление: {current_time}")
 
     def upload_button_clicked(self):
-        # Открываем окно для выбора файла
-        file_path, _ = QFileDialog.getOpenFileName(self, 'Выберите файл', '', 'All files (*);;Text files (*.txt)')
+        try:
+            # Открываем окно для выбора файла
+            file_path, _ = QFileDialog.getOpenFileName(self, 'Выберите файл', '', 'All files (*);;Text files (*.txt)')
 
-        if file_path:  # Если файл выбран
-            response_text = self.upload_file(file_path)
-            self.lbl_last_updated.setText(response_text['message'])
+            if file_path:  # Если файл выбран
+                response_text = self.upload_file(file_path)
+                self.lbl_last_updated.setText(response_text['message'])
+        except requests.exceptions.RequestException as e:
+            show_error_message(e)
 
     def download_button_clicked(self):
         selected_row = self.table.currentRow()  # Получаем индекс у выбранной строки
@@ -137,3 +144,14 @@ class UploadingDownloadingFiles(QWidget):
             self.mainwindow.open_server_file('files/' + filename)
         else:
             self.lbl_last_updated.setText("Выберите файл, который хотите открыть.")
+
+
+def show_error_message(e):
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Critical)
+    msg.setText('Ошибка')
+    msg.setInformativeText(f'Произошла ошибка: {e}')
+    msg.setWindowTitle('Ошибка')
+    msg.setStandardButtons(QMessageBox.Ok)
+    msg.setStyleSheet('QMessageBox {background-color: #f2dede; color: #a94442;} QLabel {color: #a94442;}')
+    msg.exec_()
