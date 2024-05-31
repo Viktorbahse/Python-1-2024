@@ -1,23 +1,20 @@
 from flask import Flask, request, send_from_directory, jsonify, abort
 import os
 import sqlite3
-import socket
-import pickle
+from pathlib import Path
+
+db_path = 'handler/users.db'
+
 
 def login(data):
-    db_path = 'handler/users.db'
     con = sqlite3.connect(db_path)
     cur = con.cursor()
-    # tret="table"
-    # cur.execute(f'SELECT name FROM sqlite_master WHERE type="{tret}";')
-    # # Получить результат запроса
-    # table_names = [table[0] for table in cur.fetchall()]
-    # # Вывести имена таблиц
-    # print(table_names)
     cur.execute(f'SELECT * FROM users WHERE name="{data[0]}";')
     value = cur.fetchall()
 
     if value != [] and value[0][2] == data[1]:
+        cur.execute('UPDATE users SET ssesion_id=? WHERE name=?;', (data[2], data[0]))
+        con.commit()
         cur.close()
         con.close()
         return 'Успеспешная авторизация!'
@@ -28,22 +25,53 @@ def login(data):
 
 
 def register(data):
-    db_path = 'handler/users.db'
     con = sqlite3.connect(db_path)
     cur = con.cursor()
     cur.execute(f'SELECT * FROM users WHERE name="{data[0]}";')
-    value = cur.fetchall()
+    login = cur.fetchall()
+    cur.execute(f'SELECT * FROM users WHERE email="{data[2]}";')
+    email = cur.fetchall()
 
-    if value != []:
+    if login != []:
         cur.close()
         con.close()
-        return 'Такой пользователь уже есть!'
-    elif value == []:
-        cur.execute(f"INSERT INTO users (name, passwor) VALUES ('{data[0]}', '{data[1]}')")
+        return 'Извините, этот логин уже занят. Пожалуйста, выберите другой логин.'
+    elif email != []:
+        return 'Извините, на это почту уже зарегистрирован аккаунт.'
+    elif login == [] and email == []:
+        cur.execute(f"INSERT INTO users (name, password, email) VALUES ('{data[0]}', '{data[1]}', '{data[2]}')")
+        con.commit()
+        cur.close()
+        con.close()
+        Path('handler/' + data[0]).mkdir()
+        con = sqlite3.connect('handler/' + data[0] + '/statistics.db')
+        cur = con.cursor()
+        cur.execute('''CREATE TABLE IF NOT EXISTS levels (
+                level INT PRIMARY KEY,
+                completed INT DEFAULT 0
+            )''')
+        for i in range(1, 11):
+            cur.execute("INSERT INTO levels (level) VALUES (?)", (i,))
         con.commit()
         cur.close()
         con.close()
         return 'Успешная регистрация!'
+
+
+def update_statistic(login, level):
+    con = sqlite3.connect('handler/' + login + '/statistics.db')
+    cur = con.cursor()
+    cur.execute("UPDATE levels SET completed = 1 WHERE level = " + level)
+    con.commit()
+    total_sum = cur.execute("SELECT SUM(completed) FROM levels").fetchone()[0]
+    cur.close()
+    con.close()
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute('UPDATE users SET sum=? WHERE name=?;', (total_sum, login))
+    con.commit()
+    cur.close()
+    con.close()
 
 
 # Путь, где на сервере хранятся файлы
@@ -61,21 +89,45 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Это наш запрос. Можно в поиске http://127.0.0.1:5000/list и получить ответ
 @app.route('/list', methods=['GET'])
 def list_files():
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE ssesion_id="{client_ip}";')
+    data = cur.fetchall()
     files_info = []
+    if data != []:
+        path = 'handler/' + str(data[0][1])
+        for file_name in os.listdir(path):
+            if not file_name.endswith(".db"):
+                file_path = os.path.join(path, file_name)
+                file_stat = os.stat(file_path)
 
-    for file_name in os.listdir(uploads_dir):
-        file_path = os.path.join(uploads_dir, file_name)
-        file_stat = os.stat(file_path)
+                file_info = {
+                    'name': file_name,
+                    'size': file_stat.st_size,
+                    'created': file_stat.st_ctime,
+                    'modified': file_stat.st_mtime,  # Время последнего изменения файла
+                    'accessed': file_stat.st_atime  # Время последнего доступа к файлу, это как примеры
+                }
+                files_info.append(file_info)
 
-        file_info = {
-            'name': file_name,
-            'size': file_stat.st_size,
-            'created': file_stat.st_ctime,
-            'modified': file_stat.st_mtime,  # Время последнего изменения файла
-            'accessed': file_stat.st_atime  # Время последнего доступа к файлу, это как примеры
-        }
-        files_info.append(file_info)
 
+    else:
+        for file_name in os.listdir(uploads_dir):
+            file_path = os.path.join(uploads_dir, file_name)
+            file_stat = os.stat(file_path)
+
+            file_info = {
+                'name': file_name,
+                'size': file_stat.st_size,
+                'created': file_stat.st_ctime,
+                'modified': file_stat.st_mtime,  # Время последнего изменения файла
+                'accessed': file_stat.st_atime  # Время последнего доступа к файлу, это как примеры
+            }
+            files_info.append(file_info)
+
+    cur.close()
+    con.close()
     return jsonify({'files': files_info})
 
 
@@ -84,12 +136,29 @@ def list_files():
 def download_file(filename):
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    # Проверяем, существует ли файл
-    if os.path.isfile(filepath):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE ssesion_id="{client_ip}";')
+    data = cur.fetchall()
+    cur.close()
+    con.close()
+    if data != []:
+        path = 'handler/' + str(data[0][1])
+        app.config['FOLDER'] = path
+        filepath = os.path.join(app.config['FOLDER'], filename)
+        if os.path.isfile(filepath):
+            return send_from_directory(app.config['FOLDER'], filename, as_attachment=True)
+        else:
+            # Если файл не найден, то возвращаем ответ. Русские буквы вроде не распознает (на страничке)
+            return jsonify({'error': 'File not found'})
     else:
-        # Если файл не найден, то возвращаем ответ. Русские буквы вроде не распознает (на страничке)
-        return jsonify({'error': 'File not found'})
+        # Проверяем, существует ли файл
+        if os.path.isfile(filepath):
+            return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+        else:
+            # Если файл не найден, то возвращаем ответ. Русские буквы вроде не распознает (на страничке)
+            return jsonify({'error': 'File not found'})
 
 
 # Загрузка на сервер. Уже на страничке не проверишь.
@@ -102,39 +171,77 @@ def upload_file():
     # Проверка наличия имени файла
     if file.filename == '':
         return jsonify({'error': 'No selected file'})
-
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE ssesion_id="{client_ip}";')
+    data = cur.fetchall()
+    if data != []:
+        path = 'handler/' + str(data[0][1])
+        app.config['FOLDER'] = path
+        file.save(os.path.join(app.config['FOLDER'], file.filename))
+    else:
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+    cur.close()
+    con.close()
     return jsonify({'message': f'File {file.filename} successfully uploaded'})
 
 
+@app.route('/registration', methods=['POST'])
+def sign_up():
+    data = request.json
+    result = register(data)
+    return jsonify(result)
+
+
+@app.route('/login', methods=['POST'])
+def log_in():
+    # Получаем массив строк из запроса
+    data = request.json
+    client_ip = request.remote_addr
+    result = login(data + [client_ip])
+    return jsonify(result)
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute('UPDATE users SET ssesion_id=? WHERE ssesion_id=?;', ("null", client_ip))
+    con.commit()
+    cur.close()
+    con.close()
+    return jsonify("Ssesion_end")
+
+
+@app.route('/game_statistic', methods=['POST'])
+def uploading():
+    level = request.json
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE ssesion_id="{client_ip}";')
+    data = cur.fetchall()
+    message = "Вы не авторизованы!"
+    if data != []:
+        update_statistic(data[0][1], str(level[0]))
+        message = "Статистика обнавлена."
+    return jsonify(message)
+
+@app.route('/rating', methods=['POST'])
+def rating():
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute("SELECT name, SUM(sum) AS total_score FROM users GROUP BY name")
+    results = cur.fetchall()
+    cur.close()
+    con.close()
+    name_sum_pairs = []
+    for row in results:
+        name_sum_pairs.append((row[0], row[1]))
+    return jsonify(name_sum_pairs)
+
+
 if __name__ == '__main__':
-    # app.run(debug=True)  # Чтобы был не локальный вместо этого вроде app.run(host='0.0.0.0', port=5000) нужно написать
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 9998))
-    server_socket.listen(5)
-
-    print("Server is listening...")
-
-    while True:
-        # Принимаем входящее соединение
-        client_socket, address = server_socket.accept()
-        print(f"Connection from {address} has been established!")
-
-        # Получаем данные от клиента
-        data = client_socket.recv(4096)
-
-        # Десериализуем данные, чтобы получить имя функции и массив строк
-        func_name, strings = pickle.loads(data)
-
-        # Вызываем соответствующую функцию и получаем результат
-        if func_name == "login":
-            result = login(strings)
-        elif func_name == "register":
-            result = register(strings)
-        else:
-            result = "Invalid function name: " + func_name
-        # Отправляем результат клиенту
-        client_socket.send(pickle.dumps(result))
-
-        # Закрываем соединение с клиентом
-        client_socket.close()
+    app.run(debug=True)  # Чтобы был не локальный вместо этого вроде app.run(host='0.0.0.0', port=5000) нужно написать

@@ -3,11 +3,12 @@ from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QTab
 from PyQt5.QtCore import QSize, Qt, QThread
 from PyQt5 import QtCore
 import requests
-import datetime
-import socket
-import pickle
+from PIL import Image, ImageDraw
+import io
+import os
+from PyQt5.QtGui import QIcon, QPixmap
 
-SERVER_URL = 'http://192.168.0.105:8080'  # И тут вроде надо изменить, чтобы не локально было
+SERVER_URL = "http://127.0.0.1:5000/"  # И тут вроде надо изменить, чтобы не локально было
 
 
 class ProfileButton(QPushButton):
@@ -17,23 +18,44 @@ class ProfileButton(QPushButton):
         self.mainwindow = parent
         self.setFixedSize(55, 55)
         self.setStyleSheet("""
-            QPushButton {
-                border: none;
-                background-color: transparent;
-                padding: 0;
-                margin-top: -10px;
-                font-size: 45px;
-                text-align: center;
-                color: rgba(157, 161, 170, 255);
-            }
+               QPushButton {
+                   border: none;
+                   background-color: transparent;
+                   padding: 0;
+                   margin-top: 0px;
+                   font-size: 45px;
+                   text-align: center;
+                   color: rgba(157, 161, 170, 255);
+               }
 
-            QPushButton:pressed {
-                color: rgba(104, 110, 122, 255);
-            }
-        """)
+               QPushButton:pressed {
+                   color: rgba(104, 110, 122, 255);
+               }
+           """)
 
-        self.setText("😐")
+        self.set_icon('resources/1.jpg')
+
         self.clicked.connect(self.open)
+
+    def set_icon(self, image_path):
+        img = Image.open(image_path).convert("RGBA")
+        size = min(img.size)
+        mask = Image.new('L', (size, size), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0, size, size), fill=255)
+        img = img.crop((0, 0, size, size))
+        img.putalpha(mask)
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        buffer.seek(0)
+
+        pixmap = QPixmap()
+        pixmap.loadFromData(buffer.getvalue())
+        scaled_pixmap = pixmap.scaled(self.size(), aspectRatioMode=1,
+                                      transformMode=1)
+        icon = QIcon(scaled_pixmap)
+        self.setIcon(icon)
+        self.setIconSize(self.size())
 
     def open(self):
         if self.mainwindow.is_authorized == False:
@@ -42,58 +64,21 @@ class ProfileButton(QPushButton):
             self.mainwindow.log_out_open_widget()
 
 
+
+
 class CheckThread(QThread):
     mysignal = QtCore.pyqtSignal(str)
 
-    # def thr_login(self, name, passw):
-    #     login(name, passw, self.mysignal)
-    #
-    # def thr_register(self, name, passw):
-    #     register(name, passw, self.mysignal)
-
-    def thr_register(self, name, passw):
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect(('localhost', 9998))
-        func_name = "register"
-        strings = [name, passw]
-
-        # Сериализация данных
-        data = pickle.dumps((func_name, strings))
-
-        # Отправка данных на сервер
-        client_socket.send(data)
-
-        # Получение результата от сервера
-        result = client_socket.recv(4096)
-
-        # Десериализация результата
-        result = pickle.loads(result)
-
-        # Закрытие соединения с сервером
-        client_socket.close()
-        self.mysignal.emit(result)
+    def thr_register(self, name, passw, email):
+        data = [name, passw, email]
+        result = requests.post(SERVER_URL + 'registration', json=data)
+        self.mysignal.emit(result.json())
 
     def thr_login(self, name, passw):
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect(('localhost', 9998))
-        func_name = "login"
-        strings = [name, passw]
-
-        # Сериализация данных
-        data = pickle.dumps((func_name, strings))
-
-        # Отправка данных на сервер
-        client_socket.send(data)
-
-        # Получение результата от сервера
-        result = client_socket.recv(4096)
-
-        # Десериализация результата
-        result = pickle.loads(result)
-
-        # Закрытие соединения с сервером
-        client_socket.close()
-        self.mysignal.emit(result)
+        data = [name, passw]
+        result = requests.post(SERVER_URL + 'login', json=data)
+        result.json()
+        self.mysignal.emit(result.json())
 
 
 class ExitConfirmationWidget(QWidget):
@@ -118,6 +103,7 @@ class ExitConfirmationWidget(QWidget):
         self.layout.addWidget(self.no_button)
 
     def yes_button_clicked(self):
+        requests.post(SERVER_URL + 'logout')
         self.mainwindow.log_out(True)
 
     def no_button_clicked(self):
@@ -166,10 +152,21 @@ class Registration_interface(QWidget):
         QtCore.QMetaObject.connectSlotsByName(self)
         self.show()
 
+    def check_input(funct):
+        def wrapper(self):
+            for line_edit in self.base_line_edit:
+                if len(line_edit.text()) == 0:
+                    return
+            funct(self)
+
+        return wrapper
+
+    @check_input
     def reg(self):
         name = self.sign_up_ui.line_edit_login.text()
         passw = self.sign_up_ui.line_edit_password.text()
-        self.check_db.thr_register(name, passw)
+        email = self.sign_up_ui.line_edit_email.text()
+        self.check_db.thr_register(name, passw, email)
 
     def signal_hanler(self, value):
         QMessageBox.about(self, 'Оповещение', value)

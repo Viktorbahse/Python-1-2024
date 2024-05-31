@@ -1,12 +1,14 @@
 import json
 import configparser
+import requests
 from MathLab import game_rc
 # from sympy.parsing.sympy_parser import parse_expr
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction, QLabel
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore
 from gui.custom_graphics_view import CustomGraphicsView
 from sympy import sympify
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QMessageBox, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, \
+    QMessageBox, QAction
 from PyQt5.QtCore import Qt, QSize, QTimer, QFile
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
@@ -17,7 +19,8 @@ from gui.uploading_downloading_files import *
 from core.geometric_objects.figure import *
 from core.geometric_objects.geom_obj import Point, Line, Segment, Ray, Info
 from dlgselectmode import DlgSelectMode
-
+import datetime
+import os
 from gui.authorization_interface import *
 
 default_size = [1200, 800]
@@ -33,13 +36,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("MathLab [*]")
         self.setMinimumSize(QSize(600, 400))
         self.setGeometry(100, 100, 1200, 800)
-
         self.uploading_downloading_files = None
         self.display_timing = False  # Включает показ времени, за которое работает та или иная функция
         self.authorization = None
         self.registration = None
         self.log_out_widget = None
+        self.conection_id = None
         self.is_authorized = False
+        # self.destroyed.connect(self.on_destroyed)
         self.initUI()
         self.initMenu()
         self.scene.shapes_manager.comm.shapesChanged.connect(self.onSceneChanged)
@@ -73,6 +77,7 @@ class MainWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
     def showEvent(self, event):
         self.selectMode()
         event.accept()
@@ -205,6 +210,10 @@ class MainWindow(QMainWindow):
         saveAsAction.triggered.connect(self.saveAs)
         fileMenu.addAction(saveAsAction)
 
+        save_to_server_action = QAction('Сохранить на сервер', self)
+        save_to_server_action.triggered.connect(self.save_to_server)
+        fileMenu.addAction(save_to_server_action)
+
         fileMenu.addSeparator()
 
         selectModeAction = QAction('Выбрать режим...', self)
@@ -217,10 +226,6 @@ class MainWindow(QMainWindow):
         exitAction.setShortcut('Ctrl+Q')
         exitAction.triggered.connect(self.close)
         fileMenu.addAction(exitAction)
-        Authorization = QAction('Войти', self)
-        Authorization.triggered.connect(self.open_authorization)
-        menubar.addAction(Authorization)
-
 
     def onClose(self):
         self.confirmContinue()
@@ -228,7 +233,8 @@ class MainWindow(QMainWindow):
     def confirmContinue(self):
         if not self.isWindowModified():
             return True
-        res = QMessageBox.question(self, "MathLab", "Есть несохраненные изменения. Вы хотите продолжить?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        res = QMessageBox.question(self, "MathLab", "Есть несохраненные изменения. Вы хотите продолжить?",
+                                   QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if res == QMessageBox.Yes:
             return True
         return False
@@ -249,6 +255,12 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "MathLab", "Не могу открыть файл %s\n" % (fileName))
             return
+
+    def open_server_file(self, filename):
+        if not self.confirmContinue():
+            return
+        if (filename):
+            self.loadFile(filename)
 
     def open(self):
         if not self.confirmContinue():
@@ -456,6 +468,18 @@ class MainWindow(QMainWindow):
         if fileName:
             self.saveFile(fileName)
 
+    def save_to_server(self):
+        if self.is_authorized:
+            if self.uploading_downloading_files is None:
+                self.uploading_downloading_files = UploadingDownloadingFiles(self)
+            date_time_string = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"files/{date_time_string}.json"
+            self.saveFile(filename)
+            self.uploading_downloading_files.upload_file(filename)
+            os.unlink(filename)
+        else:
+            QMessageBox.about(self, 'Оповещение', "Войдите или зарегистрируйтесь!")
+
     def saveFile(self, fileName):
         with open(fileName, 'w', encoding='utf-8') as f:
             shapes = self.scene.shapes_manager.shapes
@@ -478,12 +502,12 @@ class MainWindow(QMainWindow):
                 for shape in shapes[key]:
                     if type(shape) == Point:
                         obj_params = {'name': shape.name, 'color': shape.color,
-                                                       'uid': shape.uid, 'typeShape': shape.typeShape,
-                                                       'point_color': shape.point_color,
-                                                       'line_color': shape.line_color,
-                                                       'radius': shape.radius,
-                                                       'x': str(shape.entity.x), 'y': str(shape.entity.y),
-                                                       'invisible': shape.invisible, 'width': shape.width}
+                                      'uid': shape.uid, 'typeShape': shape.typeShape,
+                                      'point_color': shape.point_color,
+                                      'line_color': shape.line_color,
+                                      'radius': shape.radius,
+                                      'x': str(shape.entity.x), 'y': str(shape.entity.y),
+                                      'invisible': shape.invisible, 'width': shape.width}
                         owner_params = []
                         for sh in shape.owner:
                             owner_params.append({'typeShape': sh.typeShape, 'uid': sh.uid})
@@ -503,10 +527,12 @@ class MainWindow(QMainWindow):
                         saved_shapes['Points'].append(obj_params)
                     if type(shape) == Line:
                         obj_params = {'color': shape.color, 'width': shape.width,
-                                                      'x1': str(shape.primary_elements[0].entity.x), 'y1': str(shape.primary_elements[0].entity.y),
-                                                      'x2': str(shape.primary_elements[1].entity.x), 'y2': str(shape.primary_elements[1].entity.y),
-                                                      'uid': shape.uid, 'typeShape': shape.typeShape,
-                                                      'invisible': shape.invisible, 'point_color': shape.point_color}
+                                      'x1': str(shape.primary_elements[0].entity.x),
+                                      'y1': str(shape.primary_elements[0].entity.y),
+                                      'x2': str(shape.primary_elements[1].entity.x),
+                                      'y2': str(shape.primary_elements[1].entity.y),
+                                      'uid': shape.uid, 'typeShape': shape.typeShape,
+                                      'invisible': shape.invisible, 'point_color': shape.point_color}
                         owner_params = []
                         for sh in shape.owner:
                             owner_params.append({'typeShape': sh.typeShape, 'uid': sh.uid})
@@ -523,8 +549,10 @@ class MainWindow(QMainWindow):
 
                     if type(shape) == Segment:
                         obj_params = {'color': shape.color, 'width': shape.width,
-                                      'x1': str(shape.primary_elements[0].entity.x), 'y1': str(shape.primary_elements[0].entity.y),
-                                      'x2': str(shape.primary_elements[1].entity.x), 'y2': str(shape.primary_elements[1].entity.y),
+                                      'x1': str(shape.primary_elements[0].entity.x),
+                                      'y1': str(shape.primary_elements[0].entity.y),
+                                      'x2': str(shape.primary_elements[1].entity.x),
+                                      'y2': str(shape.primary_elements[1].entity.y),
                                       'invisible': shape.invisible, 'point_color': shape.point_color,
                                       'uid': shape.uid, 'typeShape': shape.typeShape}
                         owner_params = []
@@ -542,8 +570,10 @@ class MainWindow(QMainWindow):
                         saved_shapes['Segments'].append(obj_params)
                     if type(shape) == Ray:
                         obj_params = {'color': shape.color, 'width': shape.width,
-                                      'x1': str(shape.primary_elements[0].entity.x), 'y1': str(shape.primary_elements[0].entity.y),
-                                      'x2': str(shape.primary_elements[1].entity.x), 'y2': str(shape.primary_elements[1].entity.y),
+                                      'x1': str(shape.primary_elements[0].entity.x),
+                                      'y1': str(shape.primary_elements[0].entity.y),
+                                      'x2': str(shape.primary_elements[1].entity.x),
+                                      'y2': str(shape.primary_elements[1].entity.y),
                                       'invisible': shape.invisible, 'point_color': shape.point_color,
                                       'uid': shape.uid, 'typeShape': shape.typeShape}
                         owner_params = []
@@ -561,8 +591,10 @@ class MainWindow(QMainWindow):
                         saved_shapes['Rays'].append(obj_params)
                     if type(shape) == Circle:
                         obj_params = {'color': shape.color, 'width': shape.width,
-                                      'x1': str(shape.primary_elements[0].entity.x), 'y1': str(shape.primary_elements[0].entity.y),
-                                      'x2': str(shape.primary_elements[1].entity.x), 'y2': str(shape.primary_elements[1].entity.y),
+                                      'x1': str(shape.primary_elements[0].entity.x),
+                                      'y1': str(shape.primary_elements[0].entity.y),
+                                      'x2': str(shape.primary_elements[1].entity.x),
+                                      'y2': str(shape.primary_elements[1].entity.y),
                                       'invisible': shape.invisible, 'point_color': shape.point_color,
                                       'uid': shape.uid, 'typeShape': shape.typeShape}
                         owner_params = []
@@ -623,7 +655,8 @@ class MainWindow(QMainWindow):
 
     def open_uploading_downloading_files(self):
         if not self.uploading_downloading_files:
-            self.uploading_downloading_files = UploadingDownloadingFiles()  # Создаем окно только, если оно еще не создано
+            self.uploading_downloading_files = UploadingDownloadingFiles(
+                self)  # Создаем окно только, если оно еще не создано
         self.uploading_downloading_files.show()
 
     def open_reg(self):
@@ -641,9 +674,15 @@ class MainWindow(QMainWindow):
         self.log_out_widget.close()
         self.log_out_widget = None
         if flag:
+            if self.uploading_downloading_files:
+                self.uploading_downloading_files.update_files()
             self.is_authorized = False
-            self.profile_button.setText("😐")
-
+            self.profile_button.set_icon('resources/1.jpg')
+    def exit_from_account(self):
+        if self.is_authorized:
+            if not self.log_out_widget:
+                self.log_out_widget = ExitConfirmationWidget(mainwindow=self)
+            self.log_out_widget.yes_button_clicked()
     def open_authorization(self):
         if not self.authorization:
             self.authorization = Log_in_interface(window=self)
@@ -652,9 +691,11 @@ class MainWindow(QMainWindow):
 
     def successful_authorization(self):
         self.is_authorized = True
-        self.profile_button.setText("😉")
+        self.profile_button.set_icon('resources/2.jpg')
         self.authorization.close()
         self.authorization = None
+        if self.uploading_downloading_files:
+            self.uploading_downloading_files.update_files()
 
     def successful_registration(self):
         self.registration.close()
