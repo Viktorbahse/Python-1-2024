@@ -3,10 +3,12 @@ from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QTab
 from PyQt5.QtCore import QSize, Qt, QThread
 from PyQt5 import QtCore
 import requests
+from PIL import Image, ImageDraw
+import io
+import os
+from PyQt5.QtGui import QIcon, QPixmap
 
 SERVER_URL = "http://127.0.0.1:5000/"  # И тут вроде надо изменить, чтобы не локально было
-
-
 
 
 class ProfileButton(QPushButton):
@@ -16,29 +18,52 @@ class ProfileButton(QPushButton):
         self.mainwindow = parent
         self.setFixedSize(55, 55)
         self.setStyleSheet("""
-            QPushButton {
-                border: none;
-                background-color: transparent;
-                padding: 0;
-                margin-top: -10px;
-                font-size: 45px;
-                text-align: center;
-                color: rgba(157, 161, 170, 255);
-            }
+               QPushButton {
+                   border: none;
+                   background-color: transparent;
+                   padding: 0;
+                   margin-top: 0px;
+                   font-size: 45px;
+                   text-align: center;
+                   color: rgba(157, 161, 170, 255);
+               }
 
-            QPushButton:pressed {
-                color: rgba(104, 110, 122, 255);
-            }
-        """)
+               QPushButton:pressed {
+                   color: rgba(104, 110, 122, 255);
+               }
+           """)
 
-        self.setText("😐")
+        self.set_icon('resources/1.jpg')
+
         self.clicked.connect(self.open)
+
+    def set_icon(self, image_path):
+        img = Image.open(image_path).convert("RGBA")
+        size = min(img.size)
+        mask = Image.new('L', (size, size), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0, size, size), fill=255)
+        img = img.crop((0, 0, size, size))
+        img.putalpha(mask)
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        buffer.seek(0)
+
+        pixmap = QPixmap()
+        pixmap.loadFromData(buffer.getvalue())
+        scaled_pixmap = pixmap.scaled(self.size(), aspectRatioMode=1,
+                                      transformMode=1)
+        icon = QIcon(scaled_pixmap)
+        self.setIcon(icon)
+        self.setIconSize(self.size())
 
     def open(self):
         if self.mainwindow.is_authorized == False:
             self.mainwindow.open_authorization()
         else:
             self.mainwindow.log_out_open_widget()
+
+
 
 
 class CheckThread(QThread):

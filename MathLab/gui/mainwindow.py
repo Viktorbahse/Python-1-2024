@@ -576,7 +576,7 @@ class MainWindow(QMainWindow):
             if self.uploading_downloading_files:
                 self.uploading_downloading_files.update_files()
             self.is_authorized = False
-            self.profile_button.setText("😐")
+            self.profile_button.set_icon('resources/1.jpg')
     def exit_from_account(self):
         if self.is_authorized:
             if not self.log_out_widget:
@@ -590,7 +590,7 @@ class MainWindow(QMainWindow):
 
     def successful_authorization(self):
         self.is_authorized = True
-        self.profile_button.setText("😉")
+        self.profile_button.set_icon('resources/2.jpg')
         self.authorization.close()
         self.authorization = None
         if self.uploading_downloading_files:

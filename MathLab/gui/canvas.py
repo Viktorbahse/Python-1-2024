@@ -189,13 +189,15 @@ class Canvas(QGraphicsScene):
             if func.corect:
                 bad_points = list(func.discontinuity_points.intersect(sp.Interval(x_start, x_end)))
                 if func.type in ["line", "const"]:  # Оптимизация для линий.
-                    x, y = self.to_scene_coords(x_start, func.evaluate(x_start))
-                    path.moveTo(QPointF(x, y))
-                    x, y = self.to_scene_coords(x_end, func.evaluate(x_end))
-                    path.lineTo(QPointF(x, y))
+                    x, y = x_start, func.evaluate(x_start)
+                    if x is not None and y is not None:
+                        x, y = self.to_scene_coords(x, y)
+                        path.moveTo(QPointF(x, y))
+                        x, y = self.to_scene_coords(x_end, func.evaluate(x_end))
+                        path.lineTo(QPointF(x, y))
                 elif len(bad_points) == 0:
                     drawing_status = False
-                    x_values = np.linspace(float(x_start), float(x_end), 400)
+                    x_values = np.linspace(float(x_start), float(x_end), 1600)
                     y_values = func.f(x_values)
                     for i in range(len(x_values)):
                         if math.isnan(y_values[i]):

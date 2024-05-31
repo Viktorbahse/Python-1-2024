@@ -154,8 +154,11 @@ class Function(Shape):
         self.type = "Hard"
 
     def evaluate(self, point):  # Считаем значения функции, возможны вылеты, если y_value содержит мнимую часть.
-        y_value = self.expr.subs('x', point)
-        return float(y_value)
+        try:
+            y_value = self.expr.subs('x', point)
+            return float(y_value)
+        except:
+            return None
 
     def intersection(self, func):  # Находим точки пересечения, функций, если можем:)
         try:

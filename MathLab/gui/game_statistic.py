@@ -12,4 +12,3 @@ def get_rating():
     result = sorted(result, key=lambda x: x[1], reverse=True)
     return result
 
-print(get_rating())
