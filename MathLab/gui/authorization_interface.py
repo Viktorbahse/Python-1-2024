@@ -8,7 +8,32 @@ import io
 import os
 from PyQt5.QtGui import QIcon, QPixmap
 
-SERVER_URL = "http://127.0.0.1:5000/"  # И тут вроде надо изменить, чтобы не локально было
+# Чтобы было локально
+#SERVER_URL = "http://127.0.0.1:5000/"
+SERVER_URL = 'http://18.226.17.149:5000'  # Чтобы не локально было
+
+
+def show_error_message(e):
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Critical)
+    msg.setText('Ошибка')
+    msg.setInformativeText(f'Произошла ошибка: {e}')
+    msg.setWindowTitle('Ошибка')
+    msg.setStandardButtons(QMessageBox.Ok)
+    msg.setStyleSheet('QMessageBox {background-color: #f2dede; color: #a94442;} QLabel {color: #a94442;}')
+    msg.exec_()
+
+
+def error_handling_decorator(func):
+    def wrapper(*args, **kwargs):
+        try:
+            response = func(*args, **kwargs)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as e:
+            show_error_message(e)
+            return None
+    return wrapper
 
 
 class ProfileButton(QPushButton):
@@ -64,16 +89,16 @@ class ProfileButton(QPushButton):
             self.mainwindow.log_out_open_widget()
 
 
-
-
 class CheckThread(QThread):
     mysignal = QtCore.pyqtSignal(str)
 
+    @error_handling_decorator
     def thr_register(self, name, passw, email):
         data = [name, passw, email]
         result = requests.post(SERVER_URL + 'registration', json=data)
         self.mysignal.emit(result.json())
 
+    @error_handling_decorator
     def thr_login(self, name, passw):
         data = [name, passw]
         result = requests.post(SERVER_URL + 'login', json=data)

@@ -1,8 +1,7 @@
 import json
 import configparser
 import requests
-from MathLab import game_rc
-# from sympy.parsing.sympy_parser import parse_expr
+import game_rc
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction, QLabel
 from PyQt5 import QtCore
 from gui.custom_graphics_view import CustomGraphicsView
