@@ -1,4 +1,5 @@
 import json
+import requests
 from MathLab import game_rc
 # from sympy.parsing.sympy_parser import parse_expr
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction, QLabel
@@ -576,7 +577,11 @@ class MainWindow(QMainWindow):
                 self.uploading_downloading_files.update_files()
             self.is_authorized = False
             self.profile_button.setText("😐")
-
+    def exit_from_account(self):
+        if self.is_authorized:
+            if not self.log_out_widget:
+                self.log_out_widget = ExitConfirmationWidget(mainwindow=self)
+            self.log_out_widget.yes_button_clicked()
     def open_authorization(self):
         if not self.authorization:
             self.authorization = Log_in_interface(window=self)

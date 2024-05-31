@@ -7,6 +7,8 @@ import requests
 SERVER_URL = "http://127.0.0.1:5000/"  # И тут вроде надо изменить, чтобы не локально было
 
 
+
+
 class ProfileButton(QPushButton):
     def __init__(self, parent, view):
         super().__init__(parent)

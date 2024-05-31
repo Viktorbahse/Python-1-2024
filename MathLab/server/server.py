@@ -44,7 +44,34 @@ def register(data):
         cur.close()
         con.close()
         Path('handler/' + data[0]).mkdir()
+        con = sqlite3.connect('handler/' + data[0] + '/statistics.db')
+        cur = con.cursor()
+        cur.execute('''CREATE TABLE IF NOT EXISTS levels (
+                level INT PRIMARY KEY,
+                completed INT DEFAULT 0
+            )''')
+        for i in range(1, 11):
+            cur.execute("INSERT INTO levels (level) VALUES (?)", (i,))
+        con.commit()
+        cur.close()
+        con.close()
         return 'Успешная регистрация!'
+
+
+def update_statistic(login, level):
+    con = sqlite3.connect('handler/' + login + '/statistics.db')
+    cur = con.cursor()
+    cur.execute("UPDATE levels SET completed = 1 WHERE level = " + level)
+    con.commit()
+    total_sum = cur.execute("SELECT SUM(completed) FROM levels").fetchone()[0]
+    cur.close()
+    con.close()
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute('UPDATE users SET sum=? WHERE name=?;', (total_sum, login))
+    con.commit()
+    cur.close()
+    con.close()
 
 
 # Путь, где на сервере хранятся файлы
@@ -71,17 +98,19 @@ def list_files():
     if data != []:
         path = 'handler/' + str(data[0][1])
         for file_name in os.listdir(path):
-            file_path = os.path.join(path, file_name)
-            file_stat = os.stat(file_path)
+            if not file_name.endswith(".db"):
+                file_path = os.path.join(path, file_name)
+                file_stat = os.stat(file_path)
 
-            file_info = {
-                'name': file_name,
-                'size': file_stat.st_size,
-                'created': file_stat.st_ctime,
-                'modified': file_stat.st_mtime,  # Время последнего изменения файла
-                'accessed': file_stat.st_atime  # Время последнего доступа к файлу, это как примеры
-            }
-            files_info.append(file_info)
+                file_info = {
+                    'name': file_name,
+                    'size': file_stat.st_size,
+                    'created': file_stat.st_ctime,
+                    'modified': file_stat.st_mtime,  # Время последнего изменения файла
+                    'accessed': file_stat.st_atime  # Время последнего доступа к файлу, это как примеры
+                }
+                files_info.append(file_info)
+
 
     else:
         for file_name in os.listdir(uploads_dir):
@@ -184,6 +213,34 @@ def logout():
     cur.close()
     con.close()
     return jsonify("Ssesion_end")
+
+
+@app.route('/game_statistic', methods=['POST'])
+def uploading():
+    level = request.json
+    client_ip = request.remote_addr
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute(f'SELECT * FROM users WHERE ssesion_id="{client_ip}";')
+    data = cur.fetchall()
+    message = "Вы не авторизованы!"
+    if data != []:
+        update_statistic(data[0][1], str(level[0]))
+        message = "Статистика обнавлена."
+    return jsonify(message)
+
+@app.route('/rating', methods=['POST'])
+def rating():
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute("SELECT name, SUM(sum) AS total_score FROM users GROUP BY name")
+    results = cur.fetchall()
+    cur.close()
+    con.close()
+    name_sum_pairs = []
+    for row in results:
+        name_sum_pairs.append((row[0], row[1]))
+    return jsonify(name_sum_pairs)
 
 
 if __name__ == '__main__':
