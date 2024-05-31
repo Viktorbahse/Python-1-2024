@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, 
 from PyQt5.QtCore import Qt, QSize, QTimer, QFile
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
-from gui.game_statistic import *
 from gui.timing_widget import TimingWidget
 from gui.redo_undo_buttons import *
 from tests.timing import *
