@@ -1,4 +1,5 @@
 import sys
+import configparser
 
 from PyQt5.QtWidgets import QDialog, QGridLayout, QVBoxLayout, QPushButton, QApplication, QToolBox, QTextEdit, \
     QDialogButtonBox, \
@@ -26,15 +27,24 @@ class DlgSelectLevel(QDialog):
         lay.addWidget(self.dialogButtonBox, 1, 0, 1, 2)
 
         self.toolbox.addItem(self.createPageButtons([
-            {"instruction": "Постройте прямую, проходящую через две точки",          "filename": "task01_01"},
-            {"instruction": "Постройте окружность, проходящую через заданную точку, с центром в начале координат", "filename": "task01_02"},
-            {"instruction": "Постройте середину отрезка",          "filename": "task01_03"}
+            {"level": 1, "instruction": "Постройте прямую, проходящую через две точки",          "filename": "task01_01"},
+            {"level": 2, "instruction": "Постройте окружность, проходящую через заданную точку, с центром в начале координат", "filename": "task01_02"},
+            {"level": 3, "instruction": "Постройте середину отрезка",          "filename": "task01_03"}
         ]), "Обучение")
         self.toolbox.addItem(self.createPageButtons([
-            {"instruction": "Постройте прямую, перпендикулярную данной, проходящую через заданную точку", "filename": "task02_01"},
-            {"instruction": "Постройте прямую, перпендикулярную данной, проходящую через заданную точку", "filename": "task02_02"},
-            {"instruction": "Постройте луч, делящий угол пополам",          "filename": "task02_03"}
+            {"level": 11, "instruction": "Постройте прямую, перпендикулярную данной, проходящую через заданную точку", "filename": "task02_01"},
+            {"level": 12, "instruction": "Постройте прямую, перпендикулярную данной, проходящую через заданную точку", "filename": "task02_02"},
+            {"level": 13, "instruction": "Постройте луч, делящий угол пополам",          "filename": "task02_03"}
         ]), "7 класс")
+
+    def loadListWins(self):
+        config = configparser.ConfigParser()
+        config.read('MathLab.ini')
+        m = config['DEFAULT']
+        if 'list_wins' in m.keys():
+            s = config['DEFAULT']['list_wins']
+            return s.strip('[]').replace(' ', '').split(',')
+        return []
 
     def createPageButtons(self, pageDef):
         wgt = QWidget(self)
@@ -46,8 +56,15 @@ class DlgSelectLevel(QDialog):
         for page in pageDef:
             btn = QToolButton(wgt)
             btn.setText(str(i))
+            level = page['level']
+            listWins = self.loadListWins()
+            if str(level) in listWins:
+                btn.setStyleSheet("background-color: rgb(0, 255, 0);")
+            else:
+                btn.setStyleSheet("")
+
             lay.addWidget(btn)
-            btn.setProperty("level", i)
+            btn.setProperty("level", level)
             btn.setProperty("instruction", pageDef[i - 1]["instruction"])
             btn.setProperty("filename", pageDef[i - 1]["filename"])
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)

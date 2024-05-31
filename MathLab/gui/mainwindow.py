@@ -1,4 +1,5 @@
 import json
+import configparser
 from MathLab import game_rc
 # from sympy.parsing.sympy_parser import parse_expr
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QWidget, QVBoxLayout, QLineEdit, QAction, QLabel
@@ -21,10 +22,12 @@ from gui.authorization_interface import *
 
 default_size = [1200, 800]
 
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.listWins = self.loadListWins()
+
+
         self.runGame = False
         self.fileName = None
         self.setWindowTitle("MathLab [*]")
@@ -41,12 +44,28 @@ class MainWindow(QMainWindow):
         self.initMenu()
         self.scene.shapes_manager.comm.shapesChanged.connect(self.onSceneChanged)
 
+    def loadListWins(self):
+        config = configparser.ConfigParser()
+        config.read('MathLab.ini')
+        m = config['DEFAULT']
+        if 'list_wins' in m.keys():
+            s = config['DEFAULT']['list_wins']
+            return s.strip('[]').replace(' ', '').split(',')
+        return []
+
+    def saveListWins(self):
+        config = configparser.ConfigParser()
+        config['DEFAULT']['list_wins'] = str(self.listWins)
+        with open('MathLab.ini', 'w') as configfile:
+            config.write(configfile)
+
     def onTaskSelected(self, dlg):
         filename = ":/resources/" + dlg.currentFileName + ".json"
         print("Task Selected", filename)
         self.loadFile(filename)
         self.fileNameSol = ":/resources/" + dlg.currentFileName + "_sol.json"
         self.dockTools.initEnablesTools(["Eraser", "Midpoint", "Parallel Line", "Perpendicular Line", "Perpendicular Bisector", "Angle Bisector"])
+        self.runGameLevel = dlg.currentLevel
         self.runGame = True
 
     def closeEvent(self, event):
@@ -89,7 +108,6 @@ class MainWindow(QMainWindow):
     def checkWin(self):
         filename = self.fileNameSol
         root = self.read_answer(filename)
-        pass
         shapes = self.scene.shapes_manager.shapes
         if root['type'] == 'Point':
             answer = sp.Point(sympify(root['params'][0]), sympify(root['params'][1]))
@@ -122,6 +140,9 @@ class MainWindow(QMainWindow):
         self.setWindowModified(True)
         if self.runGame == True:
             if self.checkWin():
+                if not self.runGameLevel in self.listWins:
+                    self.listWins.append(self.runGameLevel)
+                    self.saveListWins()
                 QMessageBox.information(self, "MathLab", "Ура победа!")
         pass
 
