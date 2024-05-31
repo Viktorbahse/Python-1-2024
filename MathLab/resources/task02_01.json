@@ -1,0 +1,161 @@
+{
+    "saved_params": {
+        "zoom_factor": 65.0,
+        "base_point": [
+            0,
+            0
+        ]
+    },
+    "saved_shapes": {
+        "Points": [
+            {
+                "name": "A",
+                "color": [
+                    143,
+                    0,
+                    255,
+                    255
+                ],
+                "uid": "1bf9d20a-524d-4284-8321-8faaffca5d54",
+                "typeShape": "Point",
+                "point_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "line_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "radius": 5,
+                "x": "-3",
+                "y": "-2",
+                "invisible": false,
+                "width": 1.5,
+                "owner": [
+                    {
+                        "typeShape": "Line",
+                        "uid": "0051b91a-ae71-4bcb-a470-ae95da770e54"
+                    }
+                ],
+                "primary_elements": [],
+                "secondary_elements": [],
+                "connected_shapes": []
+            },
+            {
+                "name": "B",
+                "color": [
+                    143,
+                    0,
+                    255,
+                    255
+                ],
+                "uid": "a0ebd660-072b-42ac-afa5-ee75e17ca446",
+                "typeShape": "Point",
+                "point_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "line_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "radius": 5,
+                "x": "2",
+                "y": "-1",
+                "invisible": false,
+                "width": 1.5,
+                "owner": [
+                    {
+                        "typeShape": "Line",
+                        "uid": "0051b91a-ae71-4bcb-a470-ae95da770e54"
+                    }
+                ],
+                "primary_elements": [],
+                "secondary_elements": [],
+                "connected_shapes": []
+            },
+            {
+                "name": "C",
+                "color": [
+                    71,
+                    181,
+                    255,
+                    255
+                ],
+                "uid": "e27f30ca-781c-4120-8582-f0de2cbcfc27",
+                "typeShape": "Point",
+                "point_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "line_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "radius": 5,
+                "x": "-2",
+                "y": "2",
+                "invisible": false,
+                "width": 1.5,
+                "owner": [],
+                "primary_elements": [],
+                "secondary_elements": [],
+                "connected_shapes": []
+            }
+        ],
+        "Lines": [
+            {
+                "color": [
+                    143,
+                    0,
+                    255,
+                    255
+                ],
+                "width": 1.5,
+                "x1": "-3",
+                "y1": "-2",
+                "x2": "2",
+                "y2": "-1",
+                "uid": "0051b91a-ae71-4bcb-a470-ae95da770e54",
+                "typeShape": "Line",
+                "invisible": false,
+                "point_color": [
+                    143,
+                    0,
+                    255,
+                    255
+                ],
+                "owner": [],
+                "primary_elements": [
+                    {
+                        "typeShape": "Point",
+                        "uid": "1bf9d20a-524d-4284-8321-8faaffca5d54"
+                    },
+                    {
+                        "typeShape": "Point",
+                        "uid": "a0ebd660-072b-42ac-afa5-ee75e17ca446"
+                    }
+                ],
+                "secondary_elements": []
+            }
+        ],
+        "Segments": [],
+        "Rays": [],
+        "Circles": [],
+        "Polygons": [],
+        "Infos": [],
+        "Functions": []
+    }
+}

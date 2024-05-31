@@ -1,0 +1,129 @@
+{
+    "saved_params": {
+        "zoom_factor": 65.0,
+        "base_point": [
+            0,
+            0
+        ]
+    },
+    "saved_shapes": {
+        "Points": [
+            {
+                "name": "A",
+                "color": [
+                    23,
+                    52,
+                    175,
+                    255
+                ],
+                "uid": "8a6a729d-5a90-44a8-9c2e-4830efbb4a31",
+                "typeShape": "Point",
+                "point_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "line_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "radius": 5,
+                "x": "-107/65",
+                "y": "74/65",
+                "invisible": false,
+                "width": 1.5,
+                "owner": [
+                    {
+                        "typeShape": "Segment",
+                        "uid": "31f93ce4-0a64-47e2-9547-5d705007b7f0"
+                    }
+                ],
+                "primary_elements": [],
+                "secondary_elements": [],
+                "connected_shapes": []
+            },
+            {
+                "name": "B",
+                "color": [
+                    23,
+                    52,
+                    175,
+                    255
+                ],
+                "uid": "71d2a367-756a-4d83-b528-54941d2a51f5",
+                "typeShape": "Point",
+                "point_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "line_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "radius": 5,
+                "x": "213/65",
+                "y": "-2/5",
+                "invisible": false,
+                "width": 1.5,
+                "owner": [
+                    {
+                        "typeShape": "Segment",
+                        "uid": "31f93ce4-0a64-47e2-9547-5d705007b7f0"
+                    }
+                ],
+                "primary_elements": [],
+                "secondary_elements": [],
+                "connected_shapes": []
+            }
+        ],
+        "Lines": [],
+        "Segments": [
+            {
+                "color": [
+                    23,
+                    52,
+                    175,
+                    255
+                ],
+                "width": 1.5,
+                "x1": "-107/65",
+                "y1": "74/65",
+                "x2": "213/65",
+                "y2": "-2/5",
+                "invisible": false,
+                "point_color": [
+                    23,
+                    52,
+                    175,
+                    255
+                ],
+                "uid": "31f93ce4-0a64-47e2-9547-5d705007b7f0",
+                "typeShape": "Segment",
+                "owner": [],
+                "primary_elements": [
+                    {
+                        "typeShape": "Point",
+                        "uid": "8a6a729d-5a90-44a8-9c2e-4830efbb4a31"
+                    },
+                    {
+                        "typeShape": "Point",
+                        "uid": "71d2a367-756a-4d83-b528-54941d2a51f5"
+                    }
+                ],
+                "secondary_elements": []
+            }
+        ],
+        "Rays": [],
+        "Circles": [],
+        "Polygons": [],
+        "Infos": [],
+        "Functions": []
+    }
+}

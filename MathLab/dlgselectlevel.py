@@ -26,22 +26,16 @@ class DlgSelectLevel(QDialog):
         lay.addWidget(self.dialogButtonBox, 1, 0, 1, 2)
 
         self.toolbox.addItem(self.createPageButtons([
-            {"instruction": "1_text",          "filename": "task01_01"},
-            {"instruction": "2_text_описание", "filename": "task1-2"},
-            {"instruction": "3_text",          "filename": "task1-3"}
-        ]), "Page1")
+            {"instruction": "Постройте прямую, проходящую через две точки",          "filename": "task01_01"},
+            {"instruction": "Постройте окружность, проходящую через заданную точку, с центром в начале координат", "filename": "task01_02"},
+            {"instruction": "Постройте середину отрезка",          "filename": "task01_03"}
+        ]), "Обучение")
         self.toolbox.addItem(self.createPageButtons([
-            {"instruction": "4_text",          "filename": "task2-1"},
-            {"instruction": "5_text_описание", "filename": "task2-2"},
-            {"instruction": "6_text",          "filename": "task2-3"}
-        ]), "Page2")
+            {"instruction": "Постройте прямую, перпендикулярную данной, проходящую через заданную точку", "filename": "task02_01"},
+            {"instruction": "Постройте прямую, перпендикулярную данной, проходящую через заданную точку", "filename": "task02_02"},
+            {"instruction": "Постройте луч, делящий угол пополам",          "filename": "task02_03"}
+        ]), "7 класс")
 
-        # self.toolbox.setCurrentIndex(1)
-        # self.textEdit.setText("6_text")
-
-
-    # def onBtnOkClicked(self):
-    #     self.accept()
     def createPageButtons(self, pageDef):
         wgt = QWidget(self)
         lay = QVBoxLayout(wgt)

@@ -1,0 +1,52 @@
+{
+    "saved_params": {
+        "zoom_factor": 82.95830156250003,
+        "base_point": [
+            92.8306050000001,
+            54.42746781250014
+        ]
+    },
+    "saved_shapes": {
+        "Points": [
+            {
+                "name": "A",
+                "color": [
+                    71,
+                    181,
+                    255,
+                    255
+                ],
+                "uid": "6914b93d-ef0b-44f5-9097-e9eb13d7a24e",
+                "typeShape": "Point",
+                "point_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "line_color": [
+                    105,
+                    105,
+                    105,
+                    255
+                ],
+                "radius": 5,
+                "x": "-223/100",
+                "y": "17/24",
+                "invisible": false,
+                "width": 1.5,
+                "owner": [],
+                "primary_elements": [],
+                "secondary_elements": [],
+                "connected_shapes": []
+            }
+        ],
+        "Lines": [],
+        "Segments": [],
+        "Rays": [],
+        "Circles": [],
+        "Polygons": [],
+        "Infos": [],
+        "Functions": []
+    }
+}

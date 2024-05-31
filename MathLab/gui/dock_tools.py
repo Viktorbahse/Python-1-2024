@@ -50,6 +50,11 @@ class DockTools(QDockWidget):
         self.lay.addStretch()
         self.setWidget(self.wgt)
 
+    def initEnablesTools(self, disableList):
+        actions = self.grpMode.actions()
+        for action in actions:
+            action.setDisabled(action.text() in disableList)
+
     def addEdFunc(self):
         ed = QLineEdit(self)
         ed.setMinimumHeight(30)

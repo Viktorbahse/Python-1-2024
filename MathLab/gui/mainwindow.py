@@ -46,6 +46,7 @@ class MainWindow(QMainWindow):
         print("Task Selected", filename)
         self.loadFile(filename)
         self.fileNameSol = ":/resources/" + dlg.currentFileName + "_sol.json"
+        self.dockTools.initEnablesTools(["Eraser", "Midpoint", "Parallel Line", "Perpendicular Line", "Perpendicular Bisector", "Angle Bisector"])
         self.runGame = True
 
     def closeEvent(self, event):
@@ -66,19 +67,11 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             self.modeGame = dlg.modeGame
             print("selected mode is ", self.modeGame)
+            if not self.modeGame :
+                self.dockTools.initEnablesTools([])
 
         else:
             print("reject")
-
-    # def line_equation(self, point1, point2):
-    #     k = (point2.x * point1.y - point2.y * point1.x)/(point2.x - point1.x)
-    #     b = (point2.y - point1.y) / (point2.x - point1.x)
-    #     return [k, b]
-    #
-    # def is_line_equal(self, line1, line2):
-    #     l1 = self.line_equation(line1.x, line1.y)
-    #     l2 = self.line_equation(line2.x, line2.y)
-    #     return l1[0] == l2[0] and l1[1] == l2[1]
 
     def read_answer(self, filename):
         inFile = QFile(filename)
@@ -90,20 +83,38 @@ class MainWindow(QMainWindow):
         root = json.loads(str(ba, 'utf-8'))
         return root
 
+    def radius(self, x1, y1, x2, y2):
+        return ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
+
     def checkWin(self):
         filename = self.fileNameSol
         root = self.read_answer(filename)
         pass
         shapes = self.scene.shapes_manager.shapes
         if root['type'] == 'Point':
-            pass
+            answer = sp.Point(sympify(root['params'][0]), sympify(root['params'][1]))
+            for point in shapes[Point]:
+                if(point.entity.equals(answer)):
+                    return True
         if root['type'] == 'Line':
             answer = sp.Line(sp.Point(sympify(root['params'][0]), sympify(root['params'][1])),
                           sp.Point(sympify(root['params'][2]), sympify(root['params'][3])))
             for line in shapes[Line]:
                 if (line.entity.equals(answer)):
                     return True
-        # и т д
+        if root['type'] == 'Circle':
+            answer = [sp.Point(sympify(root['params'][0]), sympify(root['params'][1])),
+                      sp.Point(sympify(root['params'][2]), sympify(root['params'][3]))]
+            for circle in shapes[Circle]:
+                if ((circle.primary_elements[0].entity.equals(answer[0])) and
+                        (circle.primary_elements[1].entity.equals(answer[1]))):
+                    return True
+        if root['type'] == 'Ray':
+            answer = sp.Segment(sp.Point(sympify(root['params'][0]), sympify(root['params'][1])),
+                          sp.Point(sympify(root['params'][2]), sympify(root['params'][3])))
+            for ray in shapes[Ray]:
+                if (ray.entity.equals(answer)):
+                    return True
         return False
 
     def onSceneChanged(self):
@@ -111,7 +122,7 @@ class MainWindow(QMainWindow):
         self.setWindowModified(True)
         if self.runGame == True:
             if self.checkWin():
-                QMessageBox.information(self, "MathLab", "Победа ефыл ттт решена")
+                QMessageBox.information(self, "MathLab", "Ура победа!")
         pass
 
     def resizeEvent(self, event):
