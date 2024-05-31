@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QWidget, 
 from PyQt5.QtCore import Qt, QSize, QTimer, QFile
 from gui.canvas import Canvas
 from gui.dock_tools import DockTools
+from gui.game_statistic import *
 from gui.timing_widget import TimingWidget
 from gui.redo_undo_buttons import *
 from tests.timing import *
@@ -146,6 +147,8 @@ class MainWindow(QMainWindow):
         if self.runGame == True:
             if self.checkWin():
                 if not self.runGameLevel in self.listWins:
+                    if self.is_authorized:
+                        game_statistic.update_stat(self.runGameLevel)
                     self.listWins.append(self.runGameLevel)
                     self.saveListWins()
                 QMessageBox.information(self, "MathLab", "Ура победа!")
